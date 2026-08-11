@@ -1,0 +1,20 @@
+# python
+__pycache__/
+*.pyc
+.venv
+.pytest_cache/
+.ruff_cache/
+dist/
+
+# keys live in ~/hotloop-work/.env; this is a safety net
+.env
+
+# datasets, cloned target repos, profiler traces and raw run outputs
+# belong in ~/hotloop-work, not in this folder
+data/
+datasets/
+repos/
+traces/
+*.pt.trace.json
+
+.DS_Store

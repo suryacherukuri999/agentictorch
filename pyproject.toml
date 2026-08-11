@@ -1,0 +1,35 @@
+[project]
+name = "hotloop"
+version = "0.1.0"
+description = "An agent that finds and fixes slow PyTorch training code, and proves each fix by measuring it."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = [
+    "modal>=1.6",
+]
+
+[project.scripts]
+hotloop = "hotloop.cli:main"
+
+[dependency-groups]
+dev = [
+    "numpy>=2",
+    "pytest>=8",
+    "ruff>=0.17",
+    "torch>=2.9",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
