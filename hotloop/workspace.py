@@ -1,0 +1,66 @@
+"""Local copies of target repos and their run results, kept outside the synced project folder.
+
+The pristine clone is never edited. Each experiment gets its own working copy,
+with the target's compatibility patch committed on top so that `git diff`
+shows only performance changes.
+"""
+
+import json
+import shutil
+import subprocess
+from datetime import UTC, datetime
+from pathlib import Path
+
+from hotloop.targets import Target
+
+WORK = Path.home() / "hotloop-work"
+
+
+def clone(target: Target) -> Path:
+    dest = WORK / "repos" / target.name
+    if not dest.exists():
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        _git(None, "clone", "--quiet", "--filter=blob:none", "--no-checkout", target.repo, dest)
+        _git(dest, "checkout", "--quiet", target.commit)
+    return dest
+
+
+def working_copy(target: Target, label: str) -> Path:
+    """Return the working copy for `label`, creating it from the pinned commit if needed."""
+    dest = WORK / "work" / target.name / label
+    if dest.exists():
+        return dest
+    shutil.copytree(clone(target), dest, symlinks=True)
+    if target.compat_patch:
+        _git(dest, "apply", target.compat_patch)
+        _git(dest, "add", "--all")
+        _git(dest, "-c", "user.name=hotloop", "-c", "user.email=hotloop@localhost", "commit",
+             "--quiet", "-m", "compatibility tweaks")  # fmt: skip
+    return dest
+
+
+def diff(repo: Path) -> str:
+    """Performance changes in a working copy, relative to its compatibility commit."""
+    return _git(repo, "diff", capture=True)
+
+
+def save_runs(target: Target, label: str, runs: list[dict]) -> Path:
+    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+    path = WORK / "runs" / target.name / f"{label}-{stamp}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"target": target.name, "label": label, "runs": runs}, indent=1))
+    return path
+
+
+def load_runs(target: Target, label: str) -> list[dict]:
+    """The most recent runs saved under `label`."""
+    paths = sorted((WORK / "runs" / target.name).glob(f"{label}-*.json"))
+    if not paths:
+        raise FileNotFoundError(f"no runs saved for {target.name} {label}")
+    return json.loads(paths[-1].read_text())["runs"]
+
+
+def _git(repo: Path | None, *args, capture: bool = False) -> str:
+    command = ["git", *(["-C", str(repo)] if repo else []), *map(str, args)]
+    out = subprocess.run(command, check=True, capture_output=capture, text=True)
+    return out.stdout if capture else ""
