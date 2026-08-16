@@ -1,0 +1,13 @@
+diff --git a/main.py b/main.py
+index 73d723f..c6ea8ed 100755
+--- a/main.py
++++ b/main.py
+@@ -26,7 +26,7 @@ def main(args):
+     #feature_extraction = FeatureExtractionTest(train_loader, test_loader, args.cuda, args.batch_size)
+ 
+     # Start model training
+-    if args.is_train == 'True':
++    if args.is_train:
+         model.train(train_loader)
+ 
+     # start evaluating on test data

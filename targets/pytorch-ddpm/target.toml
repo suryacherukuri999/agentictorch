@@ -1,0 +1,12 @@
+# DDPM on CIFAR-10 (w86763777/pytorch-ddpm), with the README's training command.
+repo = "https://github.com/w86763777/pytorch-ddpm"
+commit = "f804ccbd58a758b07f79a3b9ecdfb1beb67258f6"
+command = "python main.py --train --flagfile ./config/CIFAR10.txt"
+
+[image]
+pip = ["absl-py", "tensorboardX", "tqdm", "scipy", "packaging"]
+
+[data]
+dataset = "cifar10"
+path = "data"
+download = "python -c \"from torchvision.datasets import CIFAR10; CIFAR10('.', download=True)\" && rm cifar-10-python.tar.gz"

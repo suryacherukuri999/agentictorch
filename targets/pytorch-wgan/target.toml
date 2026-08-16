@@ -1,0 +1,14 @@
+# WGAN-GP on CIFAR-10 (Zeleni9/pytorch-wgan), with the README's training command.
+# The clock is the critic's optimizer: 5 critic steps per generator step, so
+# 10 warm-up and 50 measured steps cover whole generator iterations.
+repo = "https://github.com/Zeleni9/pytorch-wgan"
+commit = "8bd8da35402dd98b6ec6872e390f3bb0e898420e"
+command = "python main.py --model WGAN-GP --is_train True --download True --dataroot datasets/cifar --dataset cifar --generator_iters 40000 --cuda True --batch_size 64"
+
+[image]
+pip = ["tensorflow-cpu==2.18.0", "matplotlib", "scikit-learn", "scipy"]
+
+[data]
+dataset = "cifar10"
+path = "datasets/cifar"
+download = "python -c \"from torchvision.datasets import CIFAR10; CIFAR10('.', download=True)\" && rm cifar-10-python.tar.gz"
