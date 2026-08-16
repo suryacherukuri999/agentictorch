@@ -1,0 +1,19 @@
+repo,reason
+KyanChen/RSPrompter,over 300 MB
+VinAIResearch/LFM,over 300 MB
+facebookresearch/DiT,archived
+facebookresearch/InterHand2.6M,archived
+facebookresearch/TimeSformer,archived
+facebookresearch/goliath,archived
+facebookresearch/mae,archived
+facebookresearch/poincare-embeddings,archived
+google/gemma_pytorch,archived
+huggingface/diffusers,framework
+huggingface/torchMoji,archived
+intel/intel-extension-for-pytorch,archived
+layumi/Person_reID_baseline_pytorch,"list, tutorial, course or library"
+microsoft/multiview-human-pose-estimation-pytorch,archived
+naoto0804/pytorch-AdaIN,archived
+naoto0804/pytorch-inpainting-with-partial-conv,archived
+pranz24/pytorch-soft-actor-critic,archived
+wayveai/Driving-with-LLMs,over 300 MB
