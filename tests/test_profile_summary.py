@@ -18,6 +18,7 @@ TRACE = {
         event("gpu_memcpy", "Memcpy DtoH (Device -> Pageable)", 80, 5),
         event("cpu_op", "aten::_local_scalar_dense", 80, 10),
         event("cuda_runtime", "cudaStreamSynchronize", 85, 5),
+        event("cpu_op", "aten::_local_scalar_dense", 92, 1),  # .item() on a CPU tensor: no sync
         event("cpu_op", "aten::add", 190, 10),
     ]
 }
@@ -33,7 +34,7 @@ def test_summarizes_gpu_busy_data_wait_and_syncs():
     assert s.window_ms == pytest.approx(0.2)
     assert s.gpu_busy == pytest.approx((40 + 5) / 200)
     assert s.data_wait == pytest.approx(40 / 200)
-    assert s.syncs_per_step == pytest.approx(1.0)
+    assert s.syncs_per_step == pytest.approx(0.5)
     assert s.copies_to_host_per_step == pytest.approx(0.5)
     assert s.top_ops == [("aten::conv2d", 0.75), ("aten::add", 0.25)]
 

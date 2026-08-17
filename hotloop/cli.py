@@ -1,11 +1,16 @@
 """Command-line entry point."""
 
 import argparse
+import json
 import sys
+from datetime import UTC, datetime
+from pathlib import Path
 
 from hotloop import targets, workspace
 from hotloop.agent.keep import decide
-from hotloop.measurement import Measurement
+from hotloop.measurement import Measurement, tail_loss
+
+RESULTS = Path(__file__).parent.parent / "results"
 
 
 def describe(label: str, m: Measurement) -> str:
@@ -82,6 +87,51 @@ def cmd_compare(args) -> None:
     print(f"{'keep' if verdict.keep else 'revert'}: {verdict.reason}")
 
 
+def summarize_runs(m: Measurement) -> list[dict]:
+    return [
+        {
+            "seed": r.get("seed"),
+            "completed": r.get("completed"),
+            "step_ms": r.get("step_ms"),
+            "data_wait_ms": r.get("data_wait_ms"),
+            "peak_mem_allocated": r.get("peak_mem_allocated"),
+            "loss_tail": tail_loss(r.get("losses")),
+            "gpu": r.get("gpu"),
+            "torch": r.get("torch"),
+        }
+        for r in m.runs
+    ]
+
+
+def cmd_record(args) -> None:
+    """Save a comparison, with the candidate's diff, as a result file in the repo."""
+    target = targets.load(args.target)
+    base = Measurement(workspace.load_runs(target, args.baseline))
+    cand = Measurement(workspace.load_runs(target, args.candidate))
+    verdict = decide(base, cand)
+    record = {
+        "target": target.name,
+        "repo": target.repo,
+        "commit": target.commit,
+        "command": target.command,
+        "extra_args": args.extra_args,
+        "change": args.change,
+        "gpu": base.gpu,
+        "recorded": datetime.now(UTC).isoformat(timespec="seconds"),
+        "baseline": summarize_runs(base),
+        "candidate": summarize_runs(cand),
+        "speedup": verdict.speedup,
+        "keep": verdict.keep,
+        "reason": verdict.reason,
+        "diff": workspace.diff(workspace.working_copy(target, args.candidate)),
+    }
+    path = RESULTS / args.folder / f"{target.name}-{args.candidate}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(record, indent=1) + "\n")
+    print(f"{'keep' if verdict.keep else 'revert'}: {verdict.reason}")
+    print(f"saved {path}")
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="hotloop")
     sub = parser.add_subparsers(required=True)
@@ -119,6 +169,15 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("baseline")
     p.add_argument("candidate")
     p.set_defaults(func=cmd_compare)
+
+    p = sub.add_parser("record", help="save a comparison and its diff under results/")
+    p.add_argument("target", choices=targets.names())
+    p.add_argument("baseline")
+    p.add_argument("candidate")
+    p.add_argument("--change", required=True, help="one line on what the candidate changes")
+    p.add_argument("--extra-args", default="", help="arguments the candidate was run with")
+    p.add_argument("--folder", default="runs")
+    p.set_defaults(func=cmd_record)
 
     args = parser.parse_args(argv)
     args.func(args)

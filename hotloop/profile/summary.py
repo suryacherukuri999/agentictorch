@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 GPU_EVENTS = {"kernel", "gpu_memcpy", "gpu_memset"}
+# .item(), .cpu() and friends end in one of these, so counting them counts syncs.
 SYNC_CALLS = {"cudaDeviceSynchronize", "cudaStreamSynchronize", "cudaEventSynchronize"}
-ITEM_OP = "aten::_local_scalar_dense"  # what .item() and float(tensor) run
 TOP = 8
 
 
@@ -22,7 +22,7 @@ class ProfileSummary:
     window_ms: float
     gpu_busy: float | None  # share of the window with a kernel or copy running
     data_wait: float  # share of the window spent waiting on the DataLoader
-    syncs_per_step: float  # .item() calls and explicit synchronize calls
+    syncs_per_step: float  # host waits for the GPU: .item(), .cpu(), synchronize()
     copies_to_host_per_step: float
     top_ops: list[tuple[str, float]]  # (op, share of device time, or CPU time on CPU)
 
@@ -41,8 +41,8 @@ def summarize(trace: dict, ops: list[dict], steps: int) -> ProfileSummary:
         for e in events
         if e.get("cat") == "user_annotation" and e["name"].startswith("enumerate(DataLoader)")
     )
-    names = Counter(e["name"] for e in events)
-    syncs = names[ITEM_OP] + sum(names[n] for n in SYNC_CALLS)
+    names = Counter(e["name"] for e in events if e.get("cat") == "cuda_runtime")
+    syncs = sum(names[n] for n in SYNC_CALLS)
     to_host = sum(1 for e in events if e.get("cat") == "gpu_memcpy" and "DtoH" in e["name"])
 
     return ProfileSummary(

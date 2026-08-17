@@ -267,6 +267,10 @@ def _save_profile():
     prof.stop()
     os.makedirs(_state.profile_dir, exist_ok=True)
     prof.export_chrome_trace(os.path.join(_state.profile_dir, "trace.json"))
+    from torch.autograd import DeviceType
+
+    # Kernels also appear as their own entries; keep only the ops that launch
+    # them, so device time isn't counted twice.
     ops = [
         {
             "name": e.key,
@@ -275,6 +279,7 @@ def _save_profile():
             "self_device_us": e.self_device_time_total,
         }
         for e in prof.key_averages()
+        if e.device_type == DeviceType.CPU
     ]
     with open(os.path.join(_state.profile_dir, "ops.json"), "w") as f:
         json.dump(ops, f)
