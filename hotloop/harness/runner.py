@@ -7,6 +7,7 @@ containers, so it uses only the standard library.
 import contextlib
 import json
 import os
+import platform
 import re
 import shutil
 import signal
@@ -84,6 +85,7 @@ def run(
             "timed_out": timed_out,
             "wall_s": round(time.monotonic() - start, 2),
             "gpu": gpu_name(),
+            "cpu": cpu_name(),
             "log_tail": tail(log.read_bytes().decode(errors="replace")),
         }
         if (profile_dir / "trace.json").exists():
@@ -103,6 +105,16 @@ def gpu_name() -> str:
     )
     names = out.stdout.strip().splitlines()
     return names[0] if out.returncode == 0 and names else "unknown"
+
+
+def cpu_name() -> str:
+    # Containers can land on different CPUs, which matters for data loading.
+    cpuinfo = Path("/proc/cpuinfo")
+    if cpuinfo.exists():
+        for line in cpuinfo.read_text().splitlines():
+            if line.startswith("model name"):
+                return line.split(":", 1)[1].strip()
+    return platform.processor() or "unknown"
 
 
 def tail(text: str, lines: int = 80) -> str:

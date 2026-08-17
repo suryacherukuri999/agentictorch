@@ -3,10 +3,15 @@
 A change is kept only if it is faster beyond run-to-run noise (or lets a run
 that ran out of memory finish) and its loss stays within the baseline's own
 seed-to-seed variation.
+
+Runs are best measured in pairs: baseline and candidate in the same container,
+one pair per seed. Containers can land on different CPUs and GPUs, and for
+CPU-bound training that alone moved step time by 40% between runs, so
+comparing within a pair cancels it out.
 """
 
 from dataclasses import dataclass
-from statistics import mean
+from statistics import geometric_mean, mean
 
 from hotloop.measurement import Measurement
 
@@ -23,12 +28,23 @@ class Verdict:
     speedup: float | None = None
 
 
+def paired(base: Measurement, cand: Measurement) -> bool:
+    """True if each baseline run shared a container with the candidate run of the same seed."""
+    containers = [r.get("container") for r in base.runs]
+    return None not in containers and containers == [r.get("container") for r in cand.runs]
+
+
 def speedup(base: Measurement, cand: Measurement) -> float:
+    if paired(base, cand):
+        return geometric_mean(b / c for b, c in zip(base.step_ms, cand.step_ms, strict=True))
     return base.mean_step_ms / cand.mean_step_ms
 
 
 def is_faster(base: Measurement, cand: Measurement) -> bool:
-    """True if every candidate run beats every baseline run by at least MIN_GAIN."""
+    """True if the candidate wins by at least MIN_GAIN in every pair or, for unpaired
+    runs, if every candidate run beats every baseline run by that much."""
+    if paired(base, cand):
+        return all(c < b * (1 - MIN_GAIN) for b, c in zip(base.step_ms, cand.step_ms, strict=True))
     return max(cand.step_ms) < min(base.step_ms) * (1 - MIN_GAIN)
 
 

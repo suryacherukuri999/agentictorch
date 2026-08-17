@@ -93,3 +93,30 @@ def test_tail_loss_uses_the_last_quarter_of_steps():
     assert tail_loss([10.0] * 30 + [2.0] * 10) == 2.0
     assert tail_loss([None, None]) is None
     assert tail_loss([4.0, None, 2.0]) == 3.0
+
+
+def in_containers(m: Measurement, names: list[str]) -> Measurement:
+    return Measurement([{**r, "container": name} for r, name in zip(m.runs, names, strict=True)])
+
+
+def test_pairs_cancel_out_hardware_differences_between_containers():
+    # The second container is 50% slower for both configurations.
+    base = in_containers(config(step_ms=(20.0, 30.0)), ["a", "b"])
+    cand = in_containers(config(step_ms=(16.0, 24.0)), ["a", "b"])
+    verdict = decide(base, cand)
+    assert verdict.keep
+    assert verdict.speedup == pytest.approx(1.25)
+    # Unpaired, the same numbers overlap and the rule can't call it.
+    assert not decide(config(step_ms=(20.0, 30.0)), config(step_ms=(16.0, 24.0))).keep
+
+
+def test_pairs_need_the_gain_in_every_pair():
+    base = in_containers(config(step_ms=(20.0, 30.0)), ["a", "b"])
+    cand = in_containers(config(step_ms=(16.0, 29.5)), ["a", "b"])
+    assert not decide(base, cand).keep
+
+
+def test_runs_in_different_containers_are_not_pairs():
+    base = in_containers(config(step_ms=(20.0, 30.0)), ["a", "b"])
+    cand = in_containers(config(step_ms=(16.0, 24.0)), ["c", "d"])
+    assert not decide(base, cand).keep

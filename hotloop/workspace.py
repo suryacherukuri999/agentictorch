@@ -60,6 +60,35 @@ def load_runs(target: Target, label: str) -> list[dict]:
     return json.loads(paths[-1].read_text())["runs"]
 
 
+def save_ab(
+    target: Target,
+    base: str,
+    cand: str,
+    base_runs: list[dict],
+    cand_runs: list[dict],
+    base_args: str,
+    cand_args: str,
+) -> Path:
+    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+    path = WORK / "runs" / target.name / f"ab-{cand}-vs-{base}-{stamp}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    record = {
+        "target": target.name,
+        "baseline": {"label": base, "extra_args": base_args, "runs": base_runs},
+        "candidate": {"label": cand, "extra_args": cand_args, "runs": cand_runs},
+    }
+    path.write_text(json.dumps(record, indent=1))
+    return path
+
+
+def load_ab(target: Target, base: str, cand: str) -> dict:
+    """The most recent paired runs of `cand` against `base`."""
+    paths = sorted((WORK / "runs" / target.name).glob(f"ab-{cand}-vs-{base}-*.json"))
+    if not paths:
+        raise FileNotFoundError(f"no paired runs saved for {target.name} {cand} vs {base}")
+    return json.loads(paths[-1].read_text())
+
+
 def _git(repo: Path | None, *args, capture: bool = False) -> str:
     command = ["git", *(["-C", str(repo)] if repo else []), *map(str, args)]
     out = subprocess.run(command, check=True, capture_output=capture, text=True)

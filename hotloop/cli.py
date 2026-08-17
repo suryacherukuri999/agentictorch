@@ -77,14 +77,26 @@ def cmd_profile(args) -> None:
     print(f"saved {path}")
 
 
-def cmd_compare(args) -> None:
+def cmd_ab(args) -> None:
+    from hotloop.harness import modal_runner
+
     target = targets.load(args.target)
-    base = Measurement(workspace.load_runs(target, args.baseline))
-    cand = Measurement(workspace.load_runs(target, args.candidate))
+    base_runs, cand_runs = modal_runner.ab(
+        target,
+        modal_runner.Job(workspace.working_copy(target, args.baseline), args.base_args),
+        modal_runner.Job(workspace.working_copy(target, args.candidate), args.cand_args),
+        gpu=args.gpu,
+        verbose=args.verbose,
+    )
+    path = workspace.save_ab(
+        target, args.baseline, args.candidate, base_runs, cand_runs, args.base_args, args.cand_args
+    )
+    base, cand = Measurement(base_runs), Measurement(cand_runs)
     print(describe(args.baseline, base))
     print(describe(args.candidate, cand))
     verdict = decide(base, cand)
     print(f"{'keep' if verdict.keep else 'revert'}: {verdict.reason}")
+    print(f"saved {path}")
 
 
 def summarize_runs(m: Measurement) -> list[dict]:
@@ -97,6 +109,8 @@ def summarize_runs(m: Measurement) -> list[dict]:
             "peak_mem_allocated": r.get("peak_mem_allocated"),
             "loss_tail": tail_loss(r.get("losses")),
             "gpu": r.get("gpu"),
+            "cpu": r.get("cpu"),
+            "container": r.get("container"),
             "torch": r.get("torch"),
         }
         for r in m.runs
@@ -104,17 +118,19 @@ def summarize_runs(m: Measurement) -> list[dict]:
 
 
 def cmd_record(args) -> None:
-    """Save a comparison, with the candidate's diff, as a result file in the repo."""
+    """Save the latest paired comparison, with the candidate's diff, as a result file."""
     target = targets.load(args.target)
-    base = Measurement(workspace.load_runs(target, args.baseline))
-    cand = Measurement(workspace.load_runs(target, args.candidate))
+    pair = workspace.load_ab(target, args.baseline, args.candidate)
+    base = Measurement(pair["baseline"]["runs"])
+    cand = Measurement(pair["candidate"]["runs"])
     verdict = decide(base, cand)
     record = {
         "target": target.name,
         "repo": target.repo,
         "commit": target.commit,
         "command": target.command,
-        "extra_args": args.extra_args,
+        "baseline_args": pair["baseline"]["extra_args"],
+        "candidate_args": pair["candidate"]["extra_args"],
         "change": args.change,
         "gpu": base.gpu,
         "recorded": datetime.now(UTC).isoformat(timespec="seconds"),
@@ -164,18 +180,21 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--verbose", action="store_true")
     p.set_defaults(func=cmd_profile)
 
-    p = sub.add_parser("compare", help="apply the keep/revert rule to two saved measurements")
+    p = sub.add_parser("ab", help="run two working copies in the same containers and compare")
     p.add_argument("target", choices=targets.names())
     p.add_argument("baseline")
     p.add_argument("candidate")
-    p.set_defaults(func=cmd_compare)
+    p.add_argument("--base-args", default="", help="appended to the baseline's command")
+    p.add_argument("--cand-args", default="", help="appended to the candidate's command")
+    p.add_argument("--gpu", default="L4")
+    p.add_argument("--verbose", action="store_true")
+    p.set_defaults(func=cmd_ab)
 
-    p = sub.add_parser("record", help="save a comparison and its diff under results/")
+    p = sub.add_parser("record", help="save the latest paired comparison under results/")
     p.add_argument("target", choices=targets.names())
     p.add_argument("baseline")
     p.add_argument("candidate")
     p.add_argument("--change", required=True, help="one line on what the candidate changes")
-    p.add_argument("--extra-args", default="", help="arguments the candidate was run with")
     p.add_argument("--folder", default="runs")
     p.set_defaults(func=cmd_record)
 

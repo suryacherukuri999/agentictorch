@@ -3,17 +3,20 @@
 Only the measurement runs happen on Modal; the LLM calls, code edits and the
 keep/revert logic stay on the Mac. Each target gets its own image (a shared
 torch base plus the repo's dependencies), datasets live in a Volume, and the
-current working copy of the repo is uploaded with every run. Every run gets a
-fresh container, so the two seeds of a configuration also measure the noise
-between containers.
+current working copy of the repo is uploaded with every run. Every call gets a
+fresh container; `ab` runs a baseline and a candidate in the same container so
+they can be compared on the same hardware.
 """
 
 import contextlib
 import io
+import os
 import shutil
 import subprocess
 import tarfile
 import time
+import uuid
+from dataclasses import dataclass
 from pathlib import Path
 
 import modal
@@ -47,6 +50,14 @@ def image_for(target: Target) -> modal.Image:
     return image.add_local_python_source("hotloop")
 
 
+@dataclass(frozen=True)
+class Job:
+    """One configuration: a working copy, plus arguments that switch on its changes."""
+
+    repo_dir: Path
+    extra_args: str = ""
+
+
 def measure(
     target: Target,
     repo_dir: Path,
@@ -59,15 +70,77 @@ def measure(
     profile: bool = False,
     verbose: bool = False,
 ) -> list[dict]:
-    """Run the working copy at `repo_dir` once per seed, each in its own container.
+    """Run one working copy once per seed, each in its own container."""
+    job = Job(repo_dir, extra_args)
+    results = _run(
+        target,
+        [[job] for _ in seeds],
+        seeds,
+        gpu=gpu,
+        steps=steps,
+        warmup=warmup,
+        profile=profile,
+        verbose=verbose,
+    )
+    return [runs[0] for runs in results]
 
-    `extra_args` is appended to the target's command, to switch on opt-in changes.
+
+def ab(
+    target: Target,
+    base: Job,
+    cand: Job,
+    *,
+    gpu: str | None = "L4",
+    seeds: tuple[int, ...] = (0, 1),
+    verbose: bool = False,
+) -> tuple[list[dict], list[dict]]:
+    """Run baseline and candidate in the same container, one container per seed.
+
+    The order alternates between containers, so neither configuration always
+    runs second on a GPU the other has just warmed up.
     """
+    orders = [[base, cand] if i % 2 == 0 else [cand, base] for i in range(len(seeds))]
+    results = _run(target, orders, seeds, gpu=gpu, verbose=verbose)
+    base_runs, cand_runs = [], []
+    for i, (first, second) in enumerate(results):
+        base_runs.append(first if i % 2 == 0 else second)
+        cand_runs.append(second if i % 2 == 0 else first)
+    return base_runs, cand_runs
+
+
+def _run(
+    target: Target,
+    job_lists: list[list[Job]],
+    seeds: tuple[int, ...],
+    *,
+    gpu: str | None,
+    steps: int | None = None,
+    warmup: int | None = None,
+    profile: bool = False,
+    verbose: bool = False,
+) -> list[list[dict]]:
+    """Run each list of jobs in its own container, in order, and return their results."""
     if gpu is not None and gpu not in GPUS:
         raise ValueError(f"GPU must be one of {GPUS}, got {gpu}")
+    timeout = max(map(len, job_lists)) * target.timeout + STARTUP_ALLOWANCE
     rate = costs.hourly_rate(gpu, CPU_CORES, MEMORY_GIB)
-    costs.check(planned=len(seeds) * rate * (target.timeout + STARTUP_ALLOWANCE) / 3600)
-    payload = pack(repo_dir)
+    costs.check(planned=len(job_lists) * rate * timeout / 3600)
+
+    payloads = {}
+    specs = []
+    for jobs in job_lists:
+        for job in jobs:
+            if job.repo_dir not in payloads:
+                payloads[job.repo_dir] = pack(job.repo_dir)
+        specs.append(
+            [
+                {
+                    "payload": payloads[job.repo_dir],
+                    "command": f"{target.command} {job.extra_args}".strip(),
+                }
+                for job in jobs
+            ]
+        )
 
     app = modal.App(f"hotloop-{target.name}")
     function = app.function(
@@ -76,7 +149,7 @@ def measure(
         cpu=CPU_CORES,
         memory=MEMORY_GIB * 1024,
         volumes={"/data": data_volume},
-        timeout=target.timeout + STARTUP_ALLOWANCE,
+        timeout=timeout,
         single_use_containers=True,
         serialized=True,
     )(_measure_in_container)
@@ -86,8 +159,7 @@ def measure(
         with _output(verbose), app.run():
             calls = [
                 function.spawn(
-                    payload,
-                    f"{target.command} {extra_args}".strip(),
+                    spec,
                     steps=steps or target.steps,
                     warmup=warmup or target.warmup,
                     seed=seed,
@@ -97,7 +169,7 @@ def measure(
                     data_path=target.data_path,
                     profile=profile,
                 )
-                for seed in seeds
+                for spec, seed in zip(specs, seeds, strict=True)
             ]
             return [call.get() for call in calls]
     finally:
@@ -106,9 +178,9 @@ def measure(
         costs.record(
             target=target.name,
             gpu=gpu,
-            containers=len(seeds),
+            containers=len(job_lists),
             seconds=round(seconds, 1),
-            cost=round(len(seeds) * rate * seconds / 3600, 4),
+            cost=round(len(job_lists) * rate * seconds / 3600, 4),
         )
 
 
@@ -163,8 +235,7 @@ def _output(verbose: bool):
 
 
 def _measure_in_container(
-    payload: bytes,
-    command: str,
+    jobs: list[dict],
     *,
     steps: int,
     warmup: int,
@@ -174,25 +245,30 @@ def _measure_in_container(
     dataset: str | None,
     data_path: str | None,
     profile: bool,
-) -> dict:
-    repo = Path("/work/repo")
-    repo.mkdir(parents=True)
-    with tarfile.open(fileobj=io.BytesIO(payload)) as tar:
-        tar.extractall(repo, filter="data")
-    if dataset:
-        # Copy to local disk: the Volume is network storage, and reading it
-        # during training would make data loading slower and noisier.
-        shutil.copytree(Path("/data") / dataset, repo / data_path, dirs_exist_ok=True)
-    return runner.run(
-        command,
-        repo,
-        steps=steps,
-        warmup=warmup,
-        seed=seed,
-        timeout=timeout,
-        env=env,
-        profile=profile,
-    )
+) -> list[dict]:
+    container = os.environ.get("MODAL_TASK_ID") or uuid.uuid4().hex
+    results = []
+    for i, job in enumerate(jobs):
+        repo = Path(f"/work/repo{i}")
+        repo.mkdir(parents=True)
+        with tarfile.open(fileobj=io.BytesIO(job["payload"])) as tar:
+            tar.extractall(repo, filter="data")
+        if dataset:
+            # Copy to local disk: the Volume is network storage, and reading it
+            # during training would make data loading slower and noisier.
+            shutil.copytree(Path("/data") / dataset, repo / data_path, dirs_exist_ok=True)
+        result = runner.run(
+            job["command"],
+            repo,
+            steps=steps,
+            warmup=warmup,
+            seed=seed,
+            timeout=timeout,
+            env=env,
+            profile=profile,
+        )
+        results.append({**result, "container": container})
+    return results
 
 
 def _download_in_container(command: str, dataset: str) -> str:
