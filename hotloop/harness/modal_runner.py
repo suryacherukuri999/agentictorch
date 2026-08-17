@@ -52,12 +52,17 @@ def measure(
     repo_dir: Path,
     *,
     gpu: str | None = "L4",
+    extra_args: str = "",
     seeds: tuple[int, ...] = (0, 1),
     steps: int | None = None,
     warmup: int | None = None,
+    profile: bool = False,
     verbose: bool = False,
 ) -> list[dict]:
-    """Run the working copy at `repo_dir` once per seed, each in its own container."""
+    """Run the working copy at `repo_dir` once per seed, each in its own container.
+
+    `extra_args` is appended to the target's command, to switch on opt-in changes.
+    """
     if gpu is not None and gpu not in GPUS:
         raise ValueError(f"GPU must be one of {GPUS}, got {gpu}")
     rate = costs.hourly_rate(gpu, CPU_CORES, MEMORY_GIB)
@@ -82,7 +87,7 @@ def measure(
             calls = [
                 function.spawn(
                     payload,
-                    target.command,
+                    f"{target.command} {extra_args}".strip(),
                     steps=steps or target.steps,
                     warmup=warmup or target.warmup,
                     seed=seed,
@@ -90,6 +95,7 @@ def measure(
                     env=target.env,
                     dataset=target.dataset,
                     data_path=target.data_path,
+                    profile=profile,
                 )
                 for seed in seeds
             ]
@@ -167,6 +173,7 @@ def _measure_in_container(
     env: dict[str, str],
     dataset: str | None,
     data_path: str | None,
+    profile: bool,
 ) -> dict:
     repo = Path("/work/repo")
     repo.mkdir(parents=True)
@@ -177,7 +184,14 @@ def _measure_in_container(
         # during training would make data loading slower and noisier.
         shutil.copytree(Path("/data") / dataset, repo / data_path, dirs_exist_ok=True)
     return runner.run(
-        command, repo, steps=steps, warmup=warmup, seed=seed, timeout=timeout, env=env
+        command,
+        repo,
+        steps=steps,
+        warmup=warmup,
+        seed=seed,
+        timeout=timeout,
+        env=env,
+        profile=profile,
     )
 
 

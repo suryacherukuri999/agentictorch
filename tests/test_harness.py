@@ -107,3 +107,15 @@ def test_harness_is_inactive_without_an_output_path():
     )
     assert out.returncode == 0, out.stderr
     assert "finished 16" in out.stdout
+
+
+def test_profile_run_summarizes_the_measured_steps():
+    command = f"{sys.executable} tiny_train.py --delay 0.002"
+    result = runner.run(command, FIXTURES, steps=5, warmup=3, timeout=120, profile=True)
+    assert result["completed"], result["log_tail"]
+    profile = result["profile"]
+    assert profile["steps"] == 5
+    assert profile["gpu_busy"] is None
+    assert profile["data_wait"] > 0.3
+    assert profile["top_ops"]
+    assert "waiting on the DataLoader" in result["profile_text"]

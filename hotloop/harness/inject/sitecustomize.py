@@ -12,6 +12,10 @@ It does nothing unless HOTLOOP_OUT is set. Then, once torch is imported, it:
 - syncs CUDA only at the start and end of the measured window;
 - after HOTLOOP_WARMUP + HOTLOOP_STEPS steps, writes JSON to HOTLOOP_OUT and exits.
 
+With HOTLOOP_PROFILE set to a directory, it also runs the PyTorch profiler over
+the measured steps and saves the trace and per-op table there. The profiler
+slows training, so step times from those runs are only for diagnosis.
+
 This file runs inside the target's environment, so it uses only the standard
 library, torch and (if present) numpy.
 """
@@ -37,6 +41,8 @@ class _State:
         self.warmup = max(1, int(os.environ.get("HOTLOOP_WARMUP", "10")))
         self.steps = int(os.environ.get("HOTLOOP_STEPS", "50"))
         self.seed = int(os.environ.get("HOTLOOP_SEED", "0"))
+        self.profile_dir = os.environ.get("HOTLOOP_PROFILE")
+        self.profiler = None
         self.pid = os.getpid()
         self.clock = None
         self.step = 0
@@ -183,6 +189,8 @@ def _on_step(optimizer, args, kwargs):
     if _state.step == _state.warmup:
         _sync()
         _state.stamps.append(time.perf_counter())
+        if _state.profile_dir:
+            _start_profiler()
     elif _state.step == _state.warmup + _state.steps:
         _sync()
         _state.stamps.append(time.perf_counter())
@@ -244,8 +252,38 @@ def _write(result):
     os.replace(tmp, _state.out)
 
 
+def _start_profiler():
+    from torch.profiler import ProfilerActivity, profile
+
+    activities = [ProfilerActivity.CPU]
+    if _cuda_in_use():
+        activities.append(ProfilerActivity.CUDA)
+    _state.profiler = profile(activities=activities)
+    _state.profiler.start()
+
+
+def _save_profile():
+    prof = _state.profiler
+    prof.stop()
+    os.makedirs(_state.profile_dir, exist_ok=True)
+    prof.export_chrome_trace(os.path.join(_state.profile_dir, "trace.json"))
+    ops = [
+        {
+            "name": e.key,
+            "count": e.count,
+            "self_cpu_us": e.self_cpu_time_total,
+            "self_device_us": e.self_device_time_total,
+        }
+        for e in prof.key_averages()
+    ]
+    with open(os.path.join(_state.profile_dir, "ops.json"), "w") as f:
+        json.dump(ops, f)
+
+
 def _finish():
     _state.finished = True
+    if _state.profiler:
+        _save_profile()  # first, so reading the losses doesn't show up as syncs
     _write(_results(completed=True))
     for child in multiprocessing.active_children():  # DataLoader workers
         child.terminate()

@@ -13,7 +13,10 @@ import signal
 import subprocess
 import tempfile
 import time
+from dataclasses import asdict
 from pathlib import Path
+
+from hotloop.profile import summary
 
 INJECT_DIR = Path(__file__).parent / "inject"
 
@@ -27,14 +30,20 @@ def run(
     seed: int = 0,
     timeout: float = 1800,
     env: dict[str, str] | None = None,
+    profile: bool = False,
 ) -> dict:
-    """Run a shell command until `warmup` + `steps` optimizer steps and return its results."""
+    """Run a shell command until `warmup` + `steps` optimizer steps and return its results.
+
+    With `profile`, the measured steps run under the PyTorch profiler and the
+    result carries a short summary of it under "profile".
+    """
     if steps < 1 or warmup < 1:
         raise ValueError("steps and warmup must both be at least 1")
 
     with tempfile.TemporaryDirectory(prefix="hotloop-") as tmp:
         out = Path(tmp) / "result.json"
         log = Path(tmp) / "log.txt"
+        profile_dir = Path(tmp) / "profile"
         run_env = {**os.environ, **(env or {})}
         run_env["PYTHONPATH"] = os.pathsep.join(
             p for p in (str(INJECT_DIR), run_env.get("PYTHONPATH")) if p
@@ -45,6 +54,8 @@ def run(
             "HOTLOOP_WARMUP": str(warmup),
             "HOTLOOP_SEED": str(seed),
         }
+        if profile:
+            run_env["HOTLOOP_PROFILE"] = str(profile_dir)
 
         start = time.monotonic()
         with log.open("wb") as log_file:
@@ -75,6 +86,10 @@ def run(
             "gpu": gpu_name(),
             "log_tail": tail(log.read_bytes().decode(errors="replace")),
         }
+        if (profile_dir / "trace.json").exists():
+            summarized = summary.load(profile_dir, steps)
+            result["profile"] = asdict(summarized)
+            result["profile_text"] = summary.render(summarized)
     return result
 
 

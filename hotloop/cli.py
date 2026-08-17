@@ -42,12 +42,33 @@ def cmd_measure(args) -> None:
         target,
         repo,
         gpu=args.gpu,
+        extra_args=args.extra_args,
         steps=args.steps,
         warmup=args.warmup,
         verbose=args.verbose,
     )
     path = workspace.save_runs(target, args.label, runs)
     print(describe(args.label, Measurement(runs)))
+    print(f"saved {path}")
+
+
+def cmd_profile(args) -> None:
+    from hotloop.harness import modal_runner
+
+    target = targets.load(args.target)
+    repo = workspace.working_copy(target, args.label)
+    [run] = modal_runner.measure(
+        target,
+        repo,
+        gpu=args.gpu,
+        extra_args=args.extra_args,
+        seeds=(0,),
+        steps=args.steps,
+        profile=True,
+        verbose=args.verbose,
+    )
+    path = workspace.save_runs(target, f"profile-{args.label}", [run])
+    print(run.get("profile_text") or f"no profile: {Measurement([run]).failure()}")
     print(f"saved {path}")
 
 
@@ -78,10 +99,20 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("target", choices=targets.names())
     p.add_argument("--label", default="baseline")
     p.add_argument("--gpu", default="L4")
+    p.add_argument("--extra-args", default="", help="appended to the target's command")
     p.add_argument("--steps", type=int)
     p.add_argument("--warmup", type=int)
     p.add_argument("--verbose", action="store_true")
     p.set_defaults(func=cmd_measure)
+
+    p = sub.add_parser("profile", help="profile a short run of a working copy on Modal")
+    p.add_argument("target", choices=targets.names())
+    p.add_argument("--label", default="baseline")
+    p.add_argument("--gpu", default="L4")
+    p.add_argument("--extra-args", default="", help="appended to the target's command")
+    p.add_argument("--steps", type=int, default=10)
+    p.add_argument("--verbose", action="store_true")
+    p.set_defaults(func=cmd_profile)
 
     p = sub.add_parser("compare", help="apply the keep/revert rule to two saved measurements")
     p.add_argument("target", choices=targets.names())
