@@ -108,13 +108,22 @@ def gpu_name() -> str:
 
 
 def cpu_name() -> str:
-    # Containers can land on different CPUs, which matters for data loading.
+    """The CPU model, which matters for data loading; containers can land on different ones."""
     cpuinfo = Path("/proc/cpuinfo")
-    if cpuinfo.exists():
-        for line in cpuinfo.read_text().splitlines():
-            if line.startswith("model name"):
-                return line.split(":", 1)[1].strip()
-    return platform.processor() or "unknown"
+    if not cpuinfo.exists():
+        return platform.processor() or "unknown"
+    fields = {}
+    for line in cpuinfo.read_text().splitlines():
+        key, _, value = line.partition(":")
+        fields.setdefault(key.strip(), value.strip())
+    if fields.get("model name", "unknown") != "unknown":
+        return fields["model name"]
+    # gVisor sandboxes (Modal) hide the model name but keep vendor, family and model.
+    return " ".join(
+        f"{label}{fields[key]}"
+        for key, label in (("vendor_id", ""), ("cpu family", "family "), ("model", "model "))
+        if key in fields
+    )
 
 
 def tail(text: str, lines: int = 80) -> str:

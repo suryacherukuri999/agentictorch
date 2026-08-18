@@ -156,7 +156,7 @@ def _run(
 
     start = time.monotonic()
     try:
-        with _output(verbose), app.run():
+        with _output(verbose), _running(app):
             calls = [
                 function.spawn(
                     spec,
@@ -203,7 +203,7 @@ def download(target: Target, *, verbose: bool = True) -> str:
     )(_download_in_container)
     start = time.monotonic()
     try:
-        with _output(verbose), app.run():
+        with _output(verbose), _running(app):
             return function.remote(target.download, target.dataset)
     finally:
         seconds = time.monotonic() - start
@@ -228,6 +228,23 @@ def pack(repo_dir: Path) -> bytes:
 
 def _skip_git(info: tarfile.TarInfo) -> tarfile.TarInfo | None:
     return None if ".git" in Path(info.name).parts else info
+
+
+@contextlib.contextmanager
+def _running(app: modal.App):
+    """app.run(), retried when Modal rate-limits app creation (several runs at once)."""
+    for attempt in range(4):
+        stack = contextlib.ExitStack()
+        try:
+            stack.enter_context(app.run())
+        except modal.exception.ResourceExhaustedError:
+            if attempt == 3:
+                raise
+            time.sleep(30 * (attempt + 1))
+            continue
+        with stack:
+            yield
+        return
 
 
 def _output(verbose: bool):
