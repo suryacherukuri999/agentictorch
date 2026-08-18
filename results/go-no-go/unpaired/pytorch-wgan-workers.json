@@ -1,0 +1,58 @@
+{
+ "target": "pytorch-wgan",
+ "repo": "https://github.com/Zeleni9/pytorch-wgan",
+ "commit": "8bd8da35402dd98b6ec6872e390f3bb0e898420e",
+ "command": "python main.py --model WGAN-GP --is_train True --download True --dataroot datasets/cifar --dataset cifar --generator_iters 40000 --cuda True --batch_size 64",
+ "extra_args": "",
+ "change": "add a --workers option (default 4) and pass it to the DataLoaders",
+ "gpu": "NVIDIA L4",
+ "recorded": "2026-10-25T00:32:10+00:00",
+ "baseline": [
+  {
+   "seed": 0,
+   "completed": true,
+   "step_ms": 79.24670262,
+   "data_wait_ms": 16.54714544000008,
+   "peak_mem_allocated": 1213346816,
+   "loss_tail": -7.728417400519053,
+   "gpu": "NVIDIA L4",
+   "torch": "2.14.1+cu130"
+  },
+  {
+   "seed": 1,
+   "completed": true,
+   "step_ms": 76.82290682000001,
+   "data_wait_ms": 15.848729340000034,
+   "peak_mem_allocated": 1213346816,
+   "loss_tail": -6.933247539732191,
+   "gpu": "NVIDIA L4",
+   "torch": "2.14.1+cu130"
+  }
+ ],
+ "candidate": [
+  {
+   "seed": 0,
+   "completed": true,
+   "step_ms": 69.73456276,
+   "data_wait_ms": 2.1301834600001968,
+   "peak_mem_allocated": 1213346816,
+   "loss_tail": -7.727084126737383,
+   "gpu": "NVIDIA L4",
+   "torch": "2.14.1+cu130"
+  },
+  {
+   "seed": 1,
+   "completed": true,
+   "step_ms": 65.25247980000003,
+   "data_wait_ms": 1.8095970400005257,
+   "peak_mem_allocated": 1213346816,
+   "loss_tail": -6.956865888171726,
+   "gpu": "NVIDIA L4",
+   "torch": "2.14.1+cu130"
+  }
+ ],
+ "speedup": 1.1561821525990472,
+ "keep": true,
+ "reason": "1.16x faster, loss within noise",
+ "diff": "diff --git a/utils/config.py b/utils/config.py\nindex 473500b..1122d8e 100755\n--- a/utils/config.py\n+++ b/utils/config.py\n@@ -12,6 +12,7 @@ def parse_args():\n     parser.add_argument('--download', type=str, default='False')\n     parser.add_argument('--epochs', type=int, default=50, help='The number of epochs to run')\n     parser.add_argument('--batch_size', type=int, default=64, help='The size of batch')\n+    parser.add_argument('--workers', type=int, default=4, help='Number of DataLoader worker processes')\n     parser.add_argument('--cuda',  type=str, default='False', help='Availability of cuda')\n \n     parser.add_argument('--load_D', type=str, default='False', help='Path for loading Discriminator network')\ndiff --git a/utils/data_loader.py b/utils/data_loader.py\nindex cae393b..f3b8fc6 100755\n--- a/utils/data_loader.py\n+++ b/utils/data_loader.py\n@@ -46,7 +46,9 @@ def get_data_loader(args):\n     assert train_dataset\n     assert test_dataset\n \n-    train_dataloader = data_utils.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)\n-    test_dataloader = data_utils.DataLoader(test_dataset,  batch_size=args.batch_size, shuffle=True)\n+    train_dataloader = data_utils.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,\n+                                             num_workers=args.workers)\n+    test_dataloader = data_utils.DataLoader(test_dataset,  batch_size=args.batch_size, shuffle=True,\n+                                            num_workers=args.workers)\n \n     return train_dataloader, test_dataloader\n"
+}

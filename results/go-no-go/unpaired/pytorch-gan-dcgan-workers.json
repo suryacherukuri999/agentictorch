@@ -1,0 +1,58 @@
+{
+ "target": "pytorch-gan-dcgan",
+ "repo": "https://github.com/eriklindernoren/PyTorch-GAN",
+ "commit": "36d3c77e5ff20ebe0aeefd322326a134a279b93e",
+ "command": "cd implementations/dcgan && python dcgan.py",
+ "extra_args": "",
+ "change": "pass the existing --n_cpu option (default 8) to the DataLoader as num_workers",
+ "gpu": "NVIDIA L4",
+ "recorded": "2026-10-25T00:32:10+00:00",
+ "baseline": [
+  {
+   "seed": 0,
+   "completed": true,
+   "step_ms": 19.13835635999998,
+   "data_wait_ms": 10.72185310000009,
+   "peak_mem_allocated": 207133184,
+   "loss_tail": 0.6465250531832377,
+   "gpu": "NVIDIA L4",
+   "torch": "2.14.1+cu130"
+  },
+  {
+   "seed": 1,
+   "completed": true,
+   "step_ms": 28.888853879999985,
+   "data_wait_ms": 15.895283439999943,
+   "peak_mem_allocated": 207133184,
+   "loss_tail": 0.6738986035188039,
+   "gpu": "NVIDIA L4",
+   "torch": "2.14.1+cu130"
+  }
+ ],
+ "candidate": [
+  {
+   "seed": 0,
+   "completed": true,
+   "step_ms": 18.08395764,
+   "data_wait_ms": 2.5141254799999757,
+   "peak_mem_allocated": 207133184,
+   "loss_tail": 0.6471405148506164,
+   "gpu": "NVIDIA L4",
+   "torch": "2.14.1+cu130"
+  },
+  {
+   "seed": 1,
+   "completed": true,
+   "step_ms": 13.646094600000005,
+   "data_wait_ms": 1.6834025800000063,
+   "peak_mem_allocated": 207133184,
+   "loss_tail": 0.6737264513969421,
+   "gpu": "NVIDIA L4",
+   "torch": "2.14.1+cu130"
+  }
+ ],
+ "speedup": 1.513619009408853,
+ "keep": true,
+ "reason": "1.51x faster, loss within noise",
+ "diff": "diff --git a/implementations/dcgan/dcgan.py b/implementations/dcgan/dcgan.py\nindex 46e64c0..813fcf1 100644\n--- a/implementations/dcgan/dcgan.py\n+++ b/implementations/dcgan/dcgan.py\n@@ -128,6 +128,7 @@ dataloader = torch.utils.data.DataLoader(\n     ),\n     batch_size=opt.batch_size,\n     shuffle=True,\n+    num_workers=opt.n_cpu,\n )\n \n # Optimizers\n"
+}

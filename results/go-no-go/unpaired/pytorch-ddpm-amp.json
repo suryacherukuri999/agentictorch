@@ -1,0 +1,58 @@
+{
+ "target": "pytorch-ddpm",
+ "repo": "https://github.com/w86763777/pytorch-ddpm",
+ "commit": "f804ccbd58a758b07f79a3b9ecdfb1beb67258f6",
+ "command": "python main.py --train --flagfile ./config/CIFAR10.txt",
+ "extra_args": "--amp",
+ "change": "bf16 autocast for the forward pass and loss, behind an --amp flag (default off)",
+ "gpu": "NVIDIA L4",
+ "recorded": "2026-10-25T00:25:38+00:00",
+ "baseline": [
+  {
+   "seed": 0,
+   "completed": true,
+   "step_ms": 541.8710866200001,
+   "data_wait_ms": 2.7901889800003232,
+   "peak_mem_allocated": 8594809856,
+   "loss_tail": 0.9945615847905477,
+   "gpu": "NVIDIA L4",
+   "torch": "2.14.1+cu130"
+  },
+  {
+   "seed": 1,
+   "completed": true,
+   "step_ms": 555.6594135,
+   "data_wait_ms": 2.6381051599992134,
+   "peak_mem_allocated": 8594809856,
+   "loss_tail": 0.9946566700935364,
+   "gpu": "NVIDIA L4",
+   "torch": "2.14.1+cu130"
+  }
+ ],
+ "candidate": [
+  {
+   "seed": 0,
+   "completed": true,
+   "step_ms": 432.2399724800001,
+   "data_wait_ms": 2.742465719998677,
+   "peak_mem_allocated": 7974450688,
+   "loss_tail": 0.9945967594782511,
+   "gpu": "NVIDIA L4",
+   "torch": "2.14.1+cu130"
+  },
+  {
+   "seed": 1,
+   "completed": true,
+   "step_ms": 435.14533151999984,
+   "data_wait_ms": 2.514411419999192,
+   "peak_mem_allocated": 7974450688,
+   "loss_tail": 0.9946747223536173,
+   "gpu": "NVIDIA L4",
+   "torch": "2.14.1+cu130"
+  }
+ ],
+ "speedup": 1.2653321367778214,
+ "keep": true,
+ "reason": "1.27x faster, loss within noise",
+ "diff": "diff --git a/main.py b/main.py\nindex c6e0774..144e06d 100644\n--- a/main.py\n+++ b/main.py\n@@ -41,6 +41,7 @@ flags.DEFINE_integer('batch_size', 128, help='batch size')\n flags.DEFINE_integer('num_workers', 4, help='workers of Dataloader')\n flags.DEFINE_float('ema_decay', 0.9999, help=\"ema decay rate\")\n flags.DEFINE_bool('parallel', False, help='multi gpu training')\n+flags.DEFINE_bool('amp', False, help='train with bfloat16 autocast')\n # Logging & Sampling\n flags.DEFINE_string('logdir', './logs/DDPM_CIFAR10_EPS', help='log directory')\n flags.DEFINE_integer('sample_size', 64, \"sampling size of images\")\n@@ -149,7 +150,8 @@ def train():\n             # train\n             optim.zero_grad()\n             x_0 = next(datalooper).to(device)\n-            loss = trainer(x_0).mean()\n+            with torch.autocast('cuda', dtype=torch.bfloat16, enabled=FLAGS.amp):\n+                loss = trainer(x_0).mean()\n             loss.backward()\n             torch.nn.utils.clip_grad_norm_(\n                 net_model.parameters(), FLAGS.grad_clip)\n"
+}
