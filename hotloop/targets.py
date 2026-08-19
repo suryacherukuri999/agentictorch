@@ -10,9 +10,9 @@ TARGETS_DIR = Path(__file__).parent.parent / "targets"
 @dataclass(frozen=True)
 class Target:
     name: str
-    repo: str
-    commit: str
     command: str
+    repo: str = ""  # empty for the planted test suite, whose scripts live in bench/
+    commit: str = ""
     steps: int = 50
     warmup: int = 10
     timeout: int = 1800
@@ -36,7 +36,11 @@ class Target:
 
 
 def load(name: str) -> Target:
-    config = tomllib.loads((TARGETS_DIR / name / "target.toml").read_text())
+    return parse(name, tomllib.loads((TARGETS_DIR / name / "target.toml").read_text()))
+
+
+def parse(name: str, config: dict) -> Target:
+    config = dict(config)
     image = config.pop("image", {})
     data = config.pop("data", {})
     return Target(

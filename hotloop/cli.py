@@ -6,11 +6,27 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-from hotloop import targets, workspace
+from hotloop import bench, targets, workspace
 from hotloop.agent.keep import decide
 from hotloop.measurement import Measurement, tail_loss
 
 RESULTS = Path(__file__).parent.parent / "results"
+
+
+def target_names() -> list[str]:
+    return targets.names() + [f"bench-{c.name}" for c in bench.cases()]
+
+
+def load_target(name: str) -> targets.Target:
+    if name.startswith("bench-"):
+        return bench.target(bench.case(name.removeprefix("bench-")))
+    return targets.load(name)
+
+
+def working_copy(target: targets.Target, label: str) -> Path:
+    if target.name.startswith("bench-"):
+        return bench.working_copy(bench.case(target.name.removeprefix("bench-")), label)
+    return working_copy(target, label)
 
 
 def describe(label: str, m: Measurement) -> str:
@@ -28,21 +44,21 @@ def describe(label: str, m: Measurement) -> str:
 
 
 def cmd_clone(args) -> None:
-    target = targets.load(args.target)
-    print(workspace.working_copy(target, args.label))
+    target = load_target(args.target)
+    print(working_copy(target, args.label))
 
 
 def cmd_download(args) -> None:
     from hotloop.harness import modal_runner
 
-    print(modal_runner.download(targets.load(args.target)))
+    print(modal_runner.download(load_target(args.target)))
 
 
 def cmd_measure(args) -> None:
     from hotloop.harness import modal_runner
 
-    target = targets.load(args.target)
-    repo = workspace.working_copy(target, args.label)
+    target = load_target(args.target)
+    repo = working_copy(target, args.label)
     runs = modal_runner.measure(
         target,
         repo,
@@ -60,8 +76,8 @@ def cmd_measure(args) -> None:
 def cmd_profile(args) -> None:
     from hotloop.harness import modal_runner
 
-    target = targets.load(args.target)
-    repo = workspace.working_copy(target, args.label)
+    target = load_target(args.target)
+    repo = working_copy(target, args.label)
     [run] = modal_runner.measure(
         target,
         repo,
@@ -80,11 +96,11 @@ def cmd_profile(args) -> None:
 def cmd_ab(args) -> None:
     from hotloop.harness import modal_runner
 
-    target = targets.load(args.target)
+    target = load_target(args.target)
     base_runs, cand_runs = modal_runner.ab(
         target,
-        modal_runner.Job(workspace.working_copy(target, args.baseline), args.base_args),
-        modal_runner.Job(workspace.working_copy(target, args.candidate), args.cand_args),
+        modal_runner.Job(working_copy(target, args.baseline), args.base_args),
+        modal_runner.Job(working_copy(target, args.candidate), args.cand_args),
         gpu=args.gpu,
         verbose=args.verbose,
     )
@@ -119,7 +135,7 @@ def summarize_runs(m: Measurement) -> list[dict]:
 
 def cmd_record(args) -> None:
     """Save the latest paired comparison, with the candidate's diff, as a result file."""
-    target = targets.load(args.target)
+    target = load_target(args.target)
     pair = workspace.load_ab(target, args.baseline, args.candidate)
     base = Measurement(pair["baseline"]["runs"])
     cand = Measurement(pair["candidate"]["runs"])
@@ -139,7 +155,7 @@ def cmd_record(args) -> None:
         "speedup": verdict.speedup,
         "keep": verdict.keep,
         "reason": verdict.reason,
-        "diff": workspace.diff(workspace.working_copy(target, args.candidate)),
+        "diff": workspace.diff(working_copy(target, args.candidate)),
     }
     path = RESULTS / args.folder / f"{target.name}-{args.candidate}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -153,16 +169,16 @@ def main(argv: list[str] | None = None) -> None:
     sub = parser.add_subparsers(required=True)
 
     p = sub.add_parser("clone", help="make a working copy of a target repo")
-    p.add_argument("target", choices=targets.names())
+    p.add_argument("target", choices=target_names())
     p.add_argument("--label", default="baseline")
     p.set_defaults(func=cmd_clone)
 
     p = sub.add_parser("download", help="download a target's dataset into the Modal volume")
-    p.add_argument("target", choices=targets.names())
+    p.add_argument("target", choices=target_names())
     p.set_defaults(func=cmd_download)
 
     p = sub.add_parser("measure", help="measure a working copy on Modal, once per seed")
-    p.add_argument("target", choices=targets.names())
+    p.add_argument("target", choices=target_names())
     p.add_argument("--label", default="baseline")
     p.add_argument("--gpu", default="L4")
     p.add_argument("--extra-args", default="", help="appended to the target's command")
@@ -172,7 +188,7 @@ def main(argv: list[str] | None = None) -> None:
     p.set_defaults(func=cmd_measure)
 
     p = sub.add_parser("profile", help="profile a short run of a working copy on Modal")
-    p.add_argument("target", choices=targets.names())
+    p.add_argument("target", choices=target_names())
     p.add_argument("--label", default="baseline")
     p.add_argument("--gpu", default="L4")
     p.add_argument("--extra-args", default="", help="appended to the target's command")
@@ -181,7 +197,7 @@ def main(argv: list[str] | None = None) -> None:
     p.set_defaults(func=cmd_profile)
 
     p = sub.add_parser("ab", help="run two working copies in the same containers and compare")
-    p.add_argument("target", choices=targets.names())
+    p.add_argument("target", choices=target_names())
     p.add_argument("baseline")
     p.add_argument("candidate")
     p.add_argument("--base-args", default="", help="appended to the baseline's command")
@@ -191,7 +207,7 @@ def main(argv: list[str] | None = None) -> None:
     p.set_defaults(func=cmd_ab)
 
     p = sub.add_parser("record", help="save the latest paired comparison under results/")
-    p.add_argument("target", choices=targets.names())
+    p.add_argument("target", choices=target_names())
     p.add_argument("baseline")
     p.add_argument("candidate")
     p.add_argument("--change", required=True, help="one line on what the candidate changes")

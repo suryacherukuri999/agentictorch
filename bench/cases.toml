@@ -1,0 +1,277 @@
+# The planted test suite. Each case copies a clean script, bench/<script>/train.py,
+# and applies exact edits that plant one mistake. A case without edits is a
+# clean control: the agent must not slow it down or change its loss.
+
+[[case]]
+name = "resnet-clean"
+script = "resnet_cifar"
+mistake = ""
+
+[[case]]
+name = "resnet-workers0"
+script = "resnet_cifar"
+mistake = "training DataLoader with num_workers=0"
+[[case.edit]]
+old = '''
+        num_workers=8,
+        pin_memory=True,
+        persistent_workers=True,
+'''
+new = '''
+        num_workers=0,
+        pin_memory=True,
+'''
+
+[[case]]
+name = "resnet-pageable-copies"
+script = "resnet_cifar"
+mistake = "no pin_memory and no non_blocking copies"
+[[case.edit]]
+old = '''
+        num_workers=8,
+        pin_memory=True,
+        persistent_workers=True,
+'''
+new = '''
+        num_workers=8,
+        persistent_workers=True,
+'''
+[[case.edit]]
+old = '''
+            x = x.to(device, non_blocking=True, memory_format=torch.channels_last)
+            y = y.to(device, non_blocking=True)
+            with torch.autocast(device, dtype=torch.bfloat16):
+'''
+new = '''
+            x = x.to(device, memory_format=torch.channels_last)
+            y = y.to(device)
+            with torch.autocast(device, dtype=torch.bfloat16):
+'''
+
+[[case]]
+name = "resnet-fp32"
+script = "resnet_cifar"
+mistake = "no mixed precision"
+[[case.edit]]
+old = '''
+            with torch.autocast(device, dtype=torch.bfloat16):
+                loss = F.cross_entropy(model(x), y)
+'''
+new = '''
+            loss = F.cross_entropy(model(x), y)
+'''
+[[case.edit]]
+old = '''
+    with torch.no_grad(), torch.autocast(device, dtype=torch.bfloat16):
+'''
+new = '''
+    with torch.no_grad():
+'''
+
+[[case]]
+name = "resnet-no-cudnn-benchmark"
+script = "resnet_cifar"
+mistake = "cudnn.benchmark off for a fixed-size conv net"
+[[case.edit]]
+old = '''
+    torch.backends.cudnn.benchmark = True
+'''
+new = ""
+
+[[case]]
+name = "resnet-item-every-step"
+script = "resnet_cifar"
+mistake = "loss.item() every step"
+[[case.edit]]
+old = '''
+    step = 0
+'''
+new = '''
+    step = 0
+    running_loss = 0.0
+'''
+[[case.edit]]
+old = '''
+            optimizer.step()
+            step += 1
+'''
+new = '''
+            optimizer.step()
+            running_loss += loss.item()
+            step += 1
+'''
+
+[[case]]
+name = "resnet-empty-cache"
+script = "resnet_cifar"
+mistake = "torch.cuda.empty_cache() every step"
+[[case.edit]]
+old = '''
+            optimizer.step()
+            step += 1
+'''
+new = '''
+            optimizer.step()
+            torch.cuda.empty_cache()
+            step += 1
+'''
+
+[[case]]
+name = "resnet-eval-with-grad"
+script = "resnet_cifar"
+mistake = "validation without torch.no_grad()"
+[[case.edit]]
+old = '''
+    with torch.no_grad(), torch.autocast(device, dtype=torch.bfloat16):
+'''
+new = '''
+    with torch.autocast(device, dtype=torch.bfloat16):
+'''
+
+[[case]]
+name = "gpt-clean"
+script = "char_gpt"
+mistake = ""
+
+[[case]]
+name = "gpt-manual-attention"
+script = "char_gpt"
+mistake = "hand-written attention instead of F.scaled_dot_product_attention"
+[[case.edit]]
+old = '''
+        p = self.dropout if self.training else 0.0
+        y = F.scaled_dot_product_attention(q, k, v, dropout_p=p, is_causal=True)
+'''
+new = '''
+        scores = (q @ k.transpose(-2, -1)) * q.shape[-1] ** -0.5
+        mask = torch.ones(t, t, dtype=torch.bool, device=x.device).tril()
+        scores = scores.masked_fill(~mask, float("-inf"))
+        y = F.dropout(scores.softmax(dim=-1), self.dropout, self.training) @ v
+'''
+
+[[case]]
+name = "gpt-cpu-batches"
+script = "char_gpt"
+mistake = "batches built on the CPU every step"
+[[case.edit]]
+old = '''
+    # The whole dataset is about 1 MB, so it lives on the GPU and batches never touch the CPU.
+    train, val = encoded[:split].to(device), encoded[split:].to(device)
+'''
+new = '''
+    train, val = encoded[:split], encoded[split:]
+'''
+[[case.edit]]
+old = '''
+        starts = torch.randint(len(data) - args.block - 1, (args.batch_size,), device=device)
+        offsets = torch.arange(args.block, device=device)
+        x = data[starts[:, None] + offsets]
+        y = data[starts[:, None] + offsets + 1]
+        return x, y
+'''
+new = '''
+        starts = torch.randint(len(data) - args.block - 1, (args.batch_size,))
+        x = torch.stack([data[s : s + args.block] for s in starts])
+        y = torch.stack([data[s + 1 : s + 1 + args.block] for s in starts])
+        return x.to(device), y.to(device)
+'''
+
+[[case]]
+name = "gpt-unfused-adamw"
+script = "char_gpt"
+mistake = "AdamW looping over parameters instead of using the fused kernel"
+[[case.edit]]
+old = '''
+        model.parameters(), lr=1e-3, betas=(0.9, 0.99), weight_decay=0.1, fused=device == "cuda"
+'''
+new = '''
+        model.parameters(), lr=1e-3, betas=(0.9, 0.99), weight_decay=0.1, foreach=False
+'''
+
+[[case]]
+name = "gpt-fp32"
+script = "char_gpt"
+mistake = "no mixed precision"
+[[case.edit]]
+old = '''
+        with torch.autocast(device, dtype=torch.bfloat16):
+            loss = F.cross_entropy(model(x).flatten(0, 1), y.flatten())
+'''
+new = '''
+        loss = F.cross_entropy(model(x).flatten(0, 1), y.flatten())
+'''
+[[case.edit]]
+old = '''
+            with torch.no_grad(), torch.autocast(device, dtype=torch.bfloat16):
+'''
+new = '''
+            with torch.no_grad():
+'''
+
+[[case]]
+name = "gpt-out-of-memory"
+script = "char_gpt"
+mistake = "hand-written fp32 attention runs out of memory at block size 1024"
+args = "--block 1024"
+[[case.edit]]
+old = '''
+        p = self.dropout if self.training else 0.0
+        y = F.scaled_dot_product_attention(q, k, v, dropout_p=p, is_causal=True)
+'''
+new = '''
+        scores = (q @ k.transpose(-2, -1)) * q.shape[-1] ** -0.5
+        mask = torch.ones(t, t, dtype=torch.bool, device=x.device).tril()
+        scores = scores.masked_fill(~mask, float("-inf"))
+        y = F.dropout(scores.softmax(dim=-1), self.dropout, self.training) @ v
+'''
+[[case.edit]]
+old = '''
+        with torch.autocast(device, dtype=torch.bfloat16):
+            loss = F.cross_entropy(model(x).flatten(0, 1), y.flatten())
+'''
+new = '''
+        loss = F.cross_entropy(model(x).flatten(0, 1), y.flatten())
+'''
+
+[[case]]
+name = "bert-clean"
+script = "distilbert_sst2"
+mistake = ""
+
+[[case]]
+name = "bert-workers0"
+script = "distilbert_sst2"
+mistake = "training DataLoader with num_workers=0 while it tokenizes every sample"
+[[case.edit]]
+old = '''
+        shuffle=True,
+        num_workers=4,
+        pin_memory=True,
+        persistent_workers=True,
+'''
+new = '''
+        shuffle=True,
+        pin_memory=True,
+'''
+
+[[case]]
+name = "bert-fp32"
+script = "distilbert_sst2"
+mistake = "no mixed precision"
+[[case.edit]]
+old = '''
+            with torch.autocast(device, dtype=torch.bfloat16):
+                logits = model(input_ids=ids, attention_mask=mask).logits
+                loss = F.cross_entropy(logits, labels)
+'''
+new = '''
+            logits = model(input_ids=ids, attention_mask=mask).logits
+            loss = F.cross_entropy(logits, labels)
+'''
+[[case.edit]]
+old = '''
+    with torch.no_grad(), torch.autocast(device, dtype=torch.bfloat16):
+'''
+new = '''
+    with torch.no_grad():
+'''

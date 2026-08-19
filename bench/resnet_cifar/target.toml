@@ -1,0 +1,6 @@
+command = "python train.py --data data"
+
+[data]
+dataset = "cifar10"
+path = "data"
+download = "python -c \"from torchvision.datasets import CIFAR10; CIFAR10('.', download=True)\" && rm cifar-10-python.tar.gz"

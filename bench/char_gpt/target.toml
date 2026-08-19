@@ -1,0 +1,6 @@
+command = "python train.py --data data/input.txt"
+
+[data]
+dataset = "shakespeare"
+path = "data"
+download = "python -c \"import urllib.request as r; r.urlretrieve('https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt', 'input.txt')\""
