@@ -290,9 +290,14 @@ def _measure_in_container(
 
 def _download_in_container(command: str, dataset: str) -> str:
     dest = Path("/data") / dataset
-    dest.mkdir(parents=True, exist_ok=True)
-    if not any(dest.iterdir()):
-        subprocess.run(command, shell=True, cwd=dest, check=True)
+    if not dest.exists():
+        # Download beside the final folder and rename on success, so a failed
+        # download never leaves a half-filled folder that later runs would trust.
+        partial = Path("/data") / f".{dataset}.partial"
+        shutil.rmtree(partial, ignore_errors=True)
+        partial.mkdir(parents=True)
+        subprocess.run(command, shell=True, cwd=partial, check=True)
+        partial.rename(dest)
         data_volume.commit()
     files = [p for p in dest.rglob("*") if p.is_file()]
     return f"{len(files)} files, {sum(p.stat().st_size for p in files) / 2**20:.0f} MiB"

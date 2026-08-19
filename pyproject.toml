@@ -16,10 +16,12 @@ hotloop = "hotloop.cli:main"
 
 [dependency-groups]
 dev = [
+    "datasets==5.1.0",
     "numpy>=2",
     "pytest>=8",
     "ruff>=0.17",
     "torch>=2.9",
+    "torchvision>=0.29",
 ]
 
 [build-system]

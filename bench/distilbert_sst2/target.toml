@@ -7,4 +7,4 @@ pip = ["transformers==5.20.2", "datasets==5.1.0"]
 [data]
 dataset = "hf-sst2"
 path = "hf"
-download = "HF_HOME=. python -c \"from datasets import load_dataset; from transformers import AutoTokenizer, AutoModelForSequenceClassification; load_dataset('glue', 'sst2'); AutoTokenizer.from_pretrained('distilbert-base-uncased'); AutoModelForSequenceClassification.from_pretrained('distilbert-base-uncased')\""
+download = "HF_HOME=. python -c \"from datasets import load_dataset; from transformers import AutoTokenizer, AutoModelForSequenceClassification; load_dataset('nyu-mll/glue', 'sst2'); AutoTokenizer.from_pretrained('distilbert-base-uncased'); AutoModelForSequenceClassification.from_pretrained('distilbert-base-uncased')\" && rm -rf xet"

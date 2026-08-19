@@ -66,12 +66,16 @@ def target(case: Case) -> Target:
 
 
 def working_copy(case: Case, label: str) -> Path:
-    """A git working copy of the planted script, so `git diff` shows only later changes."""
+    """A git working copy of the planted script, so `git diff` shows only later changes.
+
+    The label "reference" gets the clean script instead: what the case should run like.
+    """
     dest = WORK / "work" / "bench" / case.name / label
     if dest.exists():
         return dest
     dest.mkdir(parents=True)
-    (dest / "train.py").write_text(planted_source(case))
+    clean = (BENCH / case.script / "train.py").read_text()
+    (dest / "train.py").write_text(clean if label == "reference" else planted_source(case))
     for args in (
         ["init", "--quiet"],
         ["add", "train.py"],

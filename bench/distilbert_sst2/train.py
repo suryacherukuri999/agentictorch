@@ -58,7 +58,7 @@ def main():
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    sst2 = load_dataset("glue", "sst2")
+    sst2 = load_dataset("nyu-mll/glue", "sst2")
     tokenizer = AutoTokenizer.from_pretrained(MODEL)
     loader = torch.utils.data.DataLoader(
         Sentences(sst2["train"], tokenizer, args.max_length),
