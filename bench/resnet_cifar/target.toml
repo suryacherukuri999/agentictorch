@@ -1,4 +1,7 @@
 command = "python train.py --data data"
+# The scripts validate every 50 steps. Warming up past the first validation keeps its
+# one-time costs (worker start-up, cuDNN autotuning for new shapes) out of the window.
+warmup = 60
 
 [data]
 dataset = "cifar10"
