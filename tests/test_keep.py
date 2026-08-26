@@ -48,6 +48,13 @@ def test_reverts_when_the_loss_moves_beyond_the_seed_spread():
     assert "loss moved" in verdict.reason
 
 
+def test_tolerates_loss_noise_from_chaotic_training():
+    # Real ResNet numbers: an edit that can't change the math (an extra loss.item()),
+    # with the loss of runs sharing a seed 0.1 to 0.2 apart.
+    base = config(step_ms=(60.0, 61.0), loss=(2.035, 1.902))
+    assert decide(base, config(step_ms=(40.0, 41.0), loss=(2.247, 1.801))).keep
+
+
 def test_uses_a_relative_floor_when_seeds_do_not_move_the_loss():
     flat = config(loss=(1.0, 1.0))
     assert decide(flat, config(step_ms=(60.0, 61.0), loss=(1.015, 1.015))).keep

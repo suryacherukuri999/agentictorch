@@ -1,8 +1,8 @@
 """The keep/revert rule.
 
 A change is kept only if it is faster beyond run-to-run noise (or lets a run
-that ran out of memory finish) and its loss stays within the baseline's own
-seed-to-seed variation.
+that ran out of memory finish) and its loss stays within the run-to-run
+variation of the loss.
 
 Runs are best measured in pairs: baseline and candidate in the same container,
 one pair per seed. Containers can land on different CPUs and GPUs, and for
@@ -10,6 +10,7 @@ CPU-bound training that alone moved step time by 40% between runs, so
 comparing within a pair cancels it out.
 """
 
+import math
 from dataclasses import dataclass
 from statistics import geometric_mean, mean
 
@@ -17,8 +18,10 @@ from hotloop.measurement import Measurement
 
 # Smaller gains aren't worth a change to someone's repo, even when they beat the noise.
 MIN_GAIN = 0.03
-# Relative loss tolerance for repos where changing the seed barely moves the loss.
+# Relative loss tolerance for repos whose loss barely varies between runs.
 LOSS_FLOOR = 0.02
+# Two-sided 95% critical values of Student's t, by degrees of freedom.
+T_95 = {1: 12.71, 2: 4.30, 3: 3.18, 4: 2.78, 5: 2.57, 6: 2.45, 7: 2.36, 8: 2.31}
 
 
 @dataclass(frozen=True)
@@ -48,20 +51,28 @@ def is_faster(base: Measurement, cand: Measurement) -> bool:
     return max(cand.step_ms) < min(base.step_ms) * (1 - MIN_GAIN)
 
 
-def loss_tolerance(base: Measurement) -> float:
-    spread = max(base.loss) - min(base.loss)
-    return max(spread, LOSS_FLOOR * abs(mean(base.loss)))
+def loss_tolerance(base: Measurement, cand: Measurement) -> float:
+    """How far the mean loss may move: a two-sample t-test at 95%, using the
+    run-to-run spread of the loss pooled over both configurations.
+
+    Comparing each run with the baseline run of the same seed looked tighter but
+    failed on chaotic training: with cuDNN autotuning and a high learning rate,
+    two ResNet runs with the same seed and code ended 0.1 apart in loss.
+    """
+    deviations = [x - mean(m.loss) for m in (base, cand) for x in m.loss]
+    dof = len(deviations) - 2
+    pooled_sd = math.sqrt(sum(d * d for d in deviations) / dof)
+    standard_error = pooled_sd * math.sqrt(1 / len(base.loss) + 1 / len(cand.loss))
+    return max(T_95.get(dof, 2.26) * standard_error, LOSS_FLOOR * abs(mean(base.loss)))
 
 
 def loss_ok(base: Measurement, cand: Measurement) -> bool:
-    """True if each candidate run's loss is within tolerance of the baseline run
-    with the same seed (same initial weights and data order)."""
+    """True if the candidate's mean loss is within tolerance of the baseline's."""
     if base.seeds != cand.seeds:
         raise ValueError(f"seeds differ: {base.seeds} vs {cand.seeds}")
     if not cand.loss_finite:
         return False
-    tolerance = loss_tolerance(base)
-    return all(abs(c - b) <= tolerance for b, c in zip(base.loss, cand.loss, strict=True))
+    return abs(mean(cand.loss) - mean(base.loss)) <= loss_tolerance(base, cand)
 
 
 def decide(base: Measurement, cand: Measurement) -> Verdict:
@@ -78,10 +89,11 @@ def decide(base: Measurement, cand: Measurement) -> Verdict:
 
     gain = speedup(base, cand)
     if not loss_ok(base, cand):
-        moved = max(abs(c - b) for b, c in zip(base.loss, cand.loss, strict=True))
-        return Verdict(
-            False, f"loss moved by {moved:.4g}, more than {loss_tolerance(base):.4g}", gain
-        )
+        if not cand.loss_finite:
+            return Verdict(False, "loss is not finite", gain)
+        moved = abs(mean(cand.loss) - mean(base.loss))
+        tolerance = loss_tolerance(base, cand)
+        return Verdict(False, f"loss moved by {moved:.4g}, more than {tolerance:.4g}", gain)
     if not is_faster(base, cand):
         return Verdict(False, f"{gain:.2f}x is within noise", gain)
     return Verdict(True, f"{gain:.2f}x faster, loss within noise", gain)
