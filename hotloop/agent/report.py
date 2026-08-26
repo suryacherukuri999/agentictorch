@@ -1,0 +1,78 @@
+"""The report of one agent run: what was wrong, each change and its measured effect."""
+
+import json
+from pathlib import Path
+
+from hotloop.agent.loop import Run
+from hotloop.measurement import Measurement
+
+
+def _speed(m: Measurement) -> str:
+    return f"{m.mean_step_ms:.1f} ms/step" if m.completed else f"failed ({m.failure()})"
+
+
+def markdown(run: Run) -> str:
+    s = run.session
+    lines = [f"# Hotloop report: {s.target.name}", ""]
+    if run.final and run.final.verdict.keep:
+        lines.append(f"**Result: {run.final.verdict.reason}** on an {run.final.baseline.gpu}.")
+    else:
+        lines.append("**Result: no change was kept.**")
+    lines += [
+        "",
+        f"- Command: `{s.target.command}`",
+        f"- Baseline: {_speed(s.baseline)} over {len(s.baseline.runs)} runs",
+        f"- Model: {run.model}, {run.turns} turns, "
+        f"{run.tokens['input']} input and {run.tokens['output']} output tokens, "
+        f"${run.cost:.4f}",
+        "",
+    ]
+    if s.profiles:
+        lines += ["## Diagnosis", "", "```", s.profiles[0], "```", ""]
+    if run.summary:
+        lines += [run.summary, ""]
+    lines += [
+        "## Changes",
+        "",
+        "| # | Change | Before | After | Outcome |",
+        "|---|---|---|---|---|",
+    ]
+    for i, a in enumerate(s.attempts, 1):
+        outcome = ("kept: " if a.verdict.keep else "reverted: ") + a.verdict.reason
+        lines.append(
+            f"| {i} | {a.description} | {_speed(a.baseline)} | {_speed(a.candidate)} | {outcome} |"
+        )
+    if run.final:
+        lines += ["", "## Diff of the kept changes", "", "```diff", run.final.diff.strip(), "```"]
+    if run.sources:
+        lines += ["", "## Sources the agent read", ""]
+        lines += [f"- [{title}]({url})" for url, title in run.sources.items()]
+    return "\n".join(lines) + "\n"
+
+
+def summary(run: Run) -> dict:
+    s = run.session
+    final = run.final
+    return {
+        "target": s.target.name,
+        "model": run.model,
+        "gpu": s.baseline.gpu,
+        "baseline_ms": s.baseline.mean_step_ms if s.baseline.completed else None,
+        "speedup": final.verdict.speedup if final and final.verdict.keep else 1.0,
+        "kept": [a.description for a in s.kept],
+        "attempts": [
+            {"change": a.description, "keep": a.verdict.keep, "reason": a.verdict.reason}
+            for a in s.attempts
+        ],
+        "llm_cost": run.cost,
+        "turns": run.turns,
+        "tokens": run.tokens,
+    }
+
+
+def write(run: Run, folder: Path, label: str) -> Path:
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / f"{label}.json").write_text(json.dumps(summary(run), indent=1) + "\n")
+    path = folder / f"{label}.md"
+    path.write_text(markdown(run))
+    return path

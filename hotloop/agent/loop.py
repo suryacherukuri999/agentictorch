@@ -1,5 +1,6 @@
 """The agent loop: the model reads code, edits it and measures each change on a GPU."""
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from hotloop.agent import llm
@@ -72,7 +73,13 @@ def context(session: Session) -> str:
     return "\n".join(lines)
 
 
-def run(session: Session, model: llm.Model, max_turns: int = 40, index=None) -> Run:
+def run(
+    session: Session,
+    model: llm.Model,
+    max_turns: int = 40,
+    index=None,
+    log: Callable[[str], None] = lambda line: None,
+) -> Run:
     toolbox = Toolbox(session, index)
     messages = [
         {"role": "system", "content": SYSTEM},
@@ -92,7 +99,10 @@ def run(session: Session, model: llm.Model, max_turns: int = 40, index=None) -> 
             messages.append({"role": "user", "content": NUDGE})
             continue
         for call in calls:
-            output = toolbox.call(call["function"]["name"], call["function"].get("arguments"))
+            name, arguments = call["function"]["name"], call["function"].get("arguments")
+            log(f"{name}({(arguments or '')[:120]})")
+            output = toolbox.call(name, arguments)
+            log(f"  -> {output.splitlines()[0][:160] if output else ''}")
             messages.append({"role": "tool", "tool_call_id": call["id"], "content": output})
         if toolbox.finished is not None or session.rounds_left == 0:
             break
