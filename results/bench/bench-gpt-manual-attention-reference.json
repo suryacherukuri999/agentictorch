@@ -1,0 +1,67 @@
+{
+ "target": "bench-gpt-manual-attention",
+ "repo": "",
+ "commit": "",
+ "command": "python train.py --data data/input.txt",
+ "baseline_args": "",
+ "candidate_args": "",
+ "change": "the clean script: how much the planted mistake costs",
+ "gpu": "NVIDIA L4",
+ "recorded": "2026-10-25T01:14:42+00:00",
+ "baseline": [
+  {
+   "seed": 0,
+   "completed": true,
+   "step_ms": 124.92629010000002,
+   "data_wait_ms": 0.0,
+   "peak_mem_allocated": 2768264192,
+   "loss_tail": 2.4420410990715027,
+   "gpu": "NVIDIA L4",
+   "cpu": "GenuineIntel family 6 model 85",
+   "container": "ta-01M5R925VP05V3E5WW8YBSAA3R",
+   "torch": "2.14.1+cu130"
+  },
+  {
+   "seed": 1,
+   "completed": true,
+   "step_ms": 123.97115084000006,
+   "data_wait_ms": 0.0,
+   "peak_mem_allocated": 2768264192,
+   "loss_tail": 2.4276263969285146,
+   "gpu": "NVIDIA L4",
+   "cpu": "GenuineIntel family 6 model 85",
+   "container": "ta-01M5R925VP3MXXQ1PTRGDPZK1R",
+   "torch": "2.14.1+cu130"
+  }
+ ],
+ "candidate": [
+  {
+   "seed": 0,
+   "completed": true,
+   "step_ms": 56.66761125999997,
+   "data_wait_ms": 0.0,
+   "peak_mem_allocated": 1714617856,
+   "loss_tail": 2.440171011856624,
+   "gpu": "NVIDIA L4",
+   "cpu": "GenuineIntel family 6 model 85",
+   "container": "ta-01M5R925VP05V3E5WW8YBSAA3R",
+   "torch": "2.14.1+cu130"
+  },
+  {
+   "seed": 1,
+   "completed": true,
+   "step_ms": 54.470132520000014,
+   "data_wait_ms": 0.0,
+   "peak_mem_allocated": 1714617856,
+   "loss_tail": 2.4355179922921315,
+   "gpu": "NVIDIA L4",
+   "cpu": "GenuineIntel family 6 model 85",
+   "container": "ta-01M5R925VP3MXXQ1PTRGDPZK1R",
+   "torch": "2.14.1+cu130"
+  }
+ ],
+ "speedup": 2.2399615783163385,
+ "keep": true,
+ "reason": "2.24x faster, loss within noise",
+ "diff": ""
+}

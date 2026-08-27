@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import signal
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -239,6 +240,9 @@ def main(argv: list[str] | None = None) -> None:
     p.set_defaults(func=cmd_record)
 
     args = parser.parse_args(argv)
+    # Exit through the normal path when killed, so Modal apps stop and the cost
+    # ledger records the run instead of leaving containers running.
+    signal.signal(signal.SIGTERM, lambda signum, frame: sys.exit(128 + signum))
     args.func(args)
 
 
