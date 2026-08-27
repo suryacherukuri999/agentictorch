@@ -1,4 +1,4 @@
-from hotloop.kb.search import BM25, chunk_section, fuse, tokenize
+from hotloop.kb.search import BM25, Chunk, Hit, best_per_url, chunk_section, fuse, tokenize
 
 
 def test_tokenize_keeps_identifiers_whole():
@@ -34,3 +34,11 @@ def test_bm25_ranks_documents_with_rare_query_terms_first():
 def test_fuse_rewards_documents_ranked_well_by_both():
     assert fuse([1, 2, 3], [3, 1, 2])[0] == 1
     assert set(fuse([1, 2], [3])) == {1, 2, 3}
+
+
+def test_keeps_the_best_chunk_of_each_section():
+    def hit(url, score):
+        return Hit(Chunk("s", "h", url, "t"), score)
+
+    hits = [hit("a", 3.0), hit("b", 2.0), hit("a", 1.0)]
+    assert [h.chunk.url for h in best_per_url(hits)] == ["a", "b"]

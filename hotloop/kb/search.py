@@ -79,6 +79,12 @@ class BM25:
         return out
 
 
+def best_per_url(hits: list[Hit]) -> list[Hit]:
+    """Keep the best-ranked chunk of each section, so the results cover more ground."""
+    seen = set()
+    return [h for h in hits if not (h.chunk.url in seen or seen.add(h.chunk.url))]
+
+
 def fuse(*rankings: list[int], k: int = 60) -> list[int]:
     """Reciprocal rank fusion: merge rankings of document ids."""
     scores = Counter()
@@ -113,8 +119,8 @@ class Index:
         dense = np.argsort(self.embeddings @ vector)[::-1][:50]
         candidates = fuse(lexical.tolist(), dense.tolist())[:CANDIDATES]
         scores = self.reranker.predict([(query, self.chunks[i].searchable) for i in candidates])
-        ranked = sorted(zip(candidates, scores, strict=True), key=lambda p: -p[1])[:k]
-        return [Hit(self.chunks[i], float(s)) for i, s in ranked]
+        ranked = sorted(zip(candidates, scores, strict=True), key=lambda p: -p[1])
+        return best_per_url([Hit(self.chunks[i], float(s)) for i, s in ranked])[:k]
 
 
 def build() -> None:
