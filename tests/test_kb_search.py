@@ -1,12 +1,16 @@
 from hotloop.kb.search import BM25, Chunk, Hit, best_per_url, chunk_section, fuse, tokenize
 
 
-def test_tokenize_keeps_identifiers_whole():
+def test_tokenize_keeps_identifiers_whole_and_in_parts():
     assert tokenize("Set num_workers in torch.compile.") == [
         "set",
         "num_workers",
+        "num",
+        "workers",
         "in",
         "torch.compile",
+        "torch",
+        "compile",
     ]
 
 

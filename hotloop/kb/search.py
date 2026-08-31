@@ -17,7 +17,9 @@ import numpy as np
 from hotloop.kb.fetch import KB
 
 EMBEDDER = "BAAI/bge-small-en-v1.5"
-RERANKER = "cross-encoder/ms-marco-MiniLM-L6-v2"
+# Chosen with hotloop.kb.evaluate: 14/15 symptom queries found in the top 4, against
+# 13/15 for ms-marco-MiniLM-L6-v2, for about 0.5 s more per query.
+RERANKER = "BAAI/bge-reranker-base"
 # BGE models embed queries with this prefix and passages without one.
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 CANDIDATES = 20
@@ -42,8 +44,18 @@ class Hit:
 
 
 def tokenize(text: str) -> list[str]:
-    # Keeps identifiers like num_workers and torch.compile whole.
-    return [t.strip(".") for t in re.findall(r"[a-z0-9_.]+", text.lower()) if t.strip(".")]
+    """Words, plus identifiers both whole and in parts: loss.item() also gives
+    loss and item, so it matches docs that write cuda_tensor.item()."""
+    tokens = []
+    for word in re.findall(r"[a-z0-9_.]+", text.lower()):
+        word = word.strip("._")
+        if not word:
+            continue
+        tokens.append(word)
+        parts = [p for p in re.split(r"[._]", word) if p]
+        if len(parts) > 1:
+            tokens += parts
+    return tokens
 
 
 def chunk_section(section: dict, words: int = 180, overlap: int = 30) -> list[Chunk]:
