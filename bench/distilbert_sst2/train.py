@@ -1,4 +1,4 @@
-"""DistilBERT fine-tuned on SST-2, written to be fast. The planted cases each break one thing."""
+"""Fine-tune DistilBERT on SST-2 sentiment."""
 
 import argparse
 

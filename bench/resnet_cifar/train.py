@@ -1,4 +1,4 @@
-"""ResNet-18 on CIFAR-10, written to be fast. The planted cases each break one thing."""
+"""Train ResNet-18 on CIFAR-10."""
 
 import argparse
 

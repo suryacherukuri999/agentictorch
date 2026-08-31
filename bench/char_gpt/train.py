@@ -1,7 +1,4 @@
-"""A character-level GPT on tiny Shakespeare, written to be fast.
-
-The planted cases each break one thing.
-"""
+"""Train a character-level GPT on tiny Shakespeare."""
 
 import argparse
 from pathlib import Path
