@@ -80,3 +80,25 @@ def test_context_reports_the_baseline_and_static_hints(session):
     assert "100.0 ms/step" in text
     assert "no mixed precision anywhere in the code" in text
     assert "You have 3 benchmark rounds." in text
+
+
+def test_blind_setup_makes_one_patch_and_measures_it_afterwards(session, monkeypatch):
+    calls = [
+        call("run_benchmark", description="not allowed"),
+        call("apply_edit", path="train.py", old="SLOW", new="FAST"),
+        call("finish", summary="done"),
+    ]
+    script = iter({"role": "assistant", "tool_calls": [c]} for c in calls)
+    seen = []
+
+    def chat(model, messages, tools):
+        seen.append(([t["function"]["name"] for t in tools], list(messages)))
+        return llm.Reply(next(script), 10, 5, 0.0, False)
+
+    monkeypatch.setattr(loop.llm, "chat", chat)
+    result = loop.run(session, llm.Model("fake", "http://x"), setup=loop.SETUPS["llm"])
+    assert "run_benchmark" not in seen[0][0]
+    assert "ms/step" not in seen[0][1][1]["content"]  # no measurements for a blind setup
+    assert seen[1][1][-1]["content"] == "error: run_benchmark is not available"
+    assert len(session.attempts) == 1
+    assert result.final.verdict.speedup == pytest.approx(2.0)

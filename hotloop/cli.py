@@ -117,17 +117,26 @@ def cmd_ab(args) -> None:
 
 
 def cmd_run(args) -> None:
-    from hotloop.agent import loop, report
+    from hotloop.agent import loop, report, rules
     from hotloop.agent.models import MODELS
     from hotloop.agent.session import Session
 
     target = load_target(args.target)
-    label = f"agent-{args.model}-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}"
+    who = "rules" if args.setup == "rules" else args.model
+    label = f"{args.setup}-{who}-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}"
     session = Session(target, working_copy(target, label), gpu=args.gpu, rounds=args.rounds)
-    print(describe("baseline", session.measure_baseline()))
-    print(session.profile())
-    result = loop.run(session, MODELS[args.model], log=print)
-    path = report.write(result, RESULTS / "agent" / target.name, label)
+    if args.setup == "rules":
+        changes = rules.apply(session.repo)
+        result = loop.Run(session, "rules", [], "; ".join(changes) or None, None, {})
+        if session.diff():
+            result.final = session.benchmark(f"rules: {'; '.join(changes)}")
+    else:
+        setup = loop.SETUPS[args.setup]
+        if setup.measured:
+            print(describe("baseline", session.measure_baseline()))
+            print(session.profile())
+        result = loop.run(session, MODELS[args.model], setup=setup, log=print)
+    path = report.write(result, RESULTS / "eval" / args.setup / target.name, label)
     final = result.final.verdict.reason if result.final else "no change kept"
     print(f"result: {final}")
     print(f"report: {path}")
@@ -226,6 +235,7 @@ def main(argv: list[str] | None = None) -> None:
 
     p = sub.add_parser("run", help="let the agent find and fix slow training code")
     p.add_argument("target", choices=target_names())
+    p.add_argument("--setup", default="agent", choices=["agent", "llm-kb", "llm", "rules"])
     p.add_argument("--model", default="ornith-9b")
     p.add_argument("--gpu", default="L4")
     p.add_argument("--rounds", type=int, default=5)

@@ -82,13 +82,16 @@ SCHEMAS = [
 
 
 class Toolbox:
-    def __init__(self, session: Session, index=None):
+    def __init__(self, session: Session, index=None, allowed: tuple[str, ...] | None = None):
         self.session = session
+        self.allowed = allowed
         self.index = index  # the knowledge base, loaded lazily because the models are slow to load
         self.sources: dict[str, str] = {}  # url -> title, for every doc the model was shown
         self.finished: str | None = None
 
     def call(self, name: str, arguments: str) -> str:
+        if self.allowed is not None and name not in self.allowed:
+            return f"error: {name} is not available"
         try:
             args = json.loads(arguments or "{}")
             return getattr(self, f"_{name}")(**args)

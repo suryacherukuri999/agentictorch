@@ -1,4 +1,9 @@
-"""The agent loop: the model reads code, edits it and measures each change on a GPU."""
+"""The agent loop: the model reads code, edits it and measures each change on a GPU.
+
+The same loop runs the setups the agent is compared with. They get fewer tools
+and no measurements, make one patch blind, and the patch is measured afterwards
+only to score it.
+"""
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -22,7 +27,33 @@ How to work:
 - Don't add command-line flags; make the change directly in the code.
 - Call finish when no promising change is left."""
 
+BLIND = """You make PyTorch training code faster without changing what it computes.
+
+How to work:
+- Read the training code and the hints you are given.
+- Make every change you are confident will make training faster, with apply_edit. You can't
+  run or measure anything, so there is no second chance to fix a mistake.
+- Don't change the model, the data, the batch size, the learning rate, the number of steps,
+  or what gets printed or saved. Only make the same training run faster.
+- Don't add command-line flags; make the change directly in the code.
+- Call finish when you are done editing."""
+
 NUDGE = "Use a tool. Call finish when no promising change is left."
+
+
+@dataclass(frozen=True)
+class Setup:
+    name: str
+    tools: tuple[str, ...]
+    measured: bool  # measurements and run_benchmark; otherwise one blind patch
+
+
+READ_AND_EDIT = ("list_files", "read_file", "search_code", "apply_edit", "finish")
+SETUPS = {
+    "llm": Setup("llm", READ_AND_EDIT, measured=False),
+    "llm-kb": Setup("llm-kb", (*READ_AND_EDIT, "search_docs"), measured=False),
+    "agent": Setup("agent", (*READ_AND_EDIT, "search_docs", "profile", "run_benchmark"), True),
+}
 
 
 @dataclass
@@ -50,7 +81,14 @@ def hints(session: Session) -> list[str]:
     return lines
 
 
-def context(session: Session) -> str:
+def context(session: Session, measured: bool = True) -> str:
+    if not measured:
+        lines = [f"Training command: {session.target.command}"]
+        found = hints(session)
+        if found:
+            lines += ["", "Hints from scanning the code (likely problems, not measured):"]
+            lines += [f"- {h}" for h in found]
+        return "\n".join(lines)
     base = session.baseline
     lines = [
         f"Training command: {session.target.command}",
@@ -76,18 +114,20 @@ def context(session: Session) -> str:
 def run(
     session: Session,
     model: llm.Model,
+    setup: Setup = SETUPS["agent"],
     max_turns: int = 40,
     index=None,
     log: Callable[[str], None] = lambda line: None,
 ) -> Run:
-    toolbox = Toolbox(session, index)
+    toolbox = Toolbox(session, index, allowed=setup.tools)
+    schemas = [s for s in SCHEMAS if s["function"]["name"] in setup.tools]
     messages = [
-        {"role": "system", "content": SYSTEM},
-        {"role": "user", "content": context(session)},
+        {"role": "system", "content": SYSTEM if setup.measured else BLIND},
+        {"role": "user", "content": context(session, setup.measured)},
     ]
     result = Run(session, model.name, messages, None, None, toolbox.sources)
     for _ in range(max_turns):
-        reply = llm.chat(model, messages, SCHEMAS)
+        reply = llm.chat(model, messages, schemas)
         result.turns += 1
         result.cost += reply.cost
         result.tokens["input"] += reply.input_tokens
@@ -107,6 +147,9 @@ def run(
         if toolbox.finished is not None or session.rounds_left == 0:
             break
     result.summary = toolbox.finished
-    if session.kept:
+    if not setup.measured:
+        if session.diff():
+            result.final = session.benchmark(f"{setup.name} patch, made without measuring")
+    elif session.kept:
         result.final = session.final()
     return result

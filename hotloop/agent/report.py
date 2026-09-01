@@ -11,8 +11,17 @@ def _speed(m: Measurement) -> str:
     return f"{m.mean_step_ms:.1f} ms/step" if m.completed else f"failed ({m.failure()})"
 
 
+def _baseline(run: Run) -> Measurement | None:
+    """The first measurement of the original code: the session's own, or, for setups
+    that never measured before editing, the baseline side of their one pair."""
+    if run.session.baseline is not None:
+        return run.session.baseline
+    return run.final.baseline if run.final else None
+
+
 def markdown(run: Run) -> str:
     s = run.session
+    base = _baseline(run)
     lines = [f"# Hotloop report: {s.target.name}", ""]
     if run.final and run.final.verdict.keep:
         lines.append(f"**Result: {run.final.verdict.reason}** on an {run.final.baseline.gpu}.")
@@ -21,7 +30,7 @@ def markdown(run: Run) -> str:
     lines += [
         "",
         f"- Command: `{s.target.command}`",
-        f"- Baseline: {_speed(s.baseline)} over {len(s.baseline.runs)} runs",
+        f"- Baseline: {_speed(base)} over {len(base.runs)} runs" if base else "- Baseline: none",
         f"- Model: {run.model}, {run.turns} turns, "
         f"{run.tokens['input']} input and {run.tokens['output']} output tokens, "
         f"${run.cost:.4f}",
@@ -53,11 +62,15 @@ def markdown(run: Run) -> str:
 def summary(run: Run) -> dict:
     s = run.session
     final = run.final
+    base = _baseline(run)
     return {
         "target": s.target.name,
         "model": run.model,
-        "gpu": s.baseline.gpu,
-        "baseline_ms": s.baseline.mean_step_ms if s.baseline.completed else None,
+        "gpu": base.gpu if base else None,
+        "baseline_ms": base.mean_step_ms if base and base.completed else None,
+        # The measured effect of the final change, whether or not the keep rule kept it:
+        # setups that patch blind would apply it either way.
+        "measured_speedup": final.verdict.speedup if final else None,
         "speedup": final.verdict.speedup if final and final.verdict.keep else 1.0,
         "kept": [a.description for a in s.kept],
         "attempts": [
