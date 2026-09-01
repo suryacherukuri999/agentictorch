@@ -31,6 +31,8 @@ CPU_CORES = 8.0
 MEMORY_GIB = 16
 # Image pull, container start and data staging, on top of the run's own timeout.
 STARTUP_ALLOWANCE = 600
+# Billed time before our code starts in a container (image load, Python start), for costing.
+BILLED_STARTUP = 60
 MAX_UPLOAD = 200 * 2**20
 
 base_image = (
@@ -155,6 +157,7 @@ def _run(
     )(_measure_in_container)
 
     start = time.monotonic()
+    results = None
     try:
         with _output(verbose), _running(app):
             calls = [
@@ -171,16 +174,21 @@ def _run(
                 )
                 for spec, seed in zip(specs, seeds, strict=True)
             ]
-            return [call.get() for call in calls]
+            results = [call.get() for call in calls]
+            return results
     finally:
-        # Wall time includes queueing, which Modal doesn't bill, so this errs high.
-        seconds = time.monotonic() - start
+        if results:
+            # Each container timed itself; add what Modal bills before our code runs.
+            seconds = sum(runs[-1]["container_s"] + BILLED_STARTUP for runs in results)
+        else:
+            # Failed or interrupted: count every container for the whole wall time.
+            seconds = len(job_lists) * (time.monotonic() - start)
         costs.record(
             target=target.name,
             gpu=gpu,
             containers=len(job_lists),
             seconds=round(seconds, 1),
-            cost=round(len(job_lists) * rate * seconds / 3600, 4),
+            cost=round(rate * seconds / 3600, 4),
         )
 
 
@@ -263,6 +271,7 @@ def _measure_in_container(
     data_path: str | None,
     profile: bool,
 ) -> list[dict]:
+    started = time.monotonic()
     container = os.environ.get("MODAL_TASK_ID") or uuid.uuid4().hex
     results = []
     for i, job in enumerate(jobs):
@@ -284,7 +293,10 @@ def _measure_in_container(
             env=env,
             profile=profile,
         )
-        results.append({**result, "container": container})
+        # container_s is the time so far, so the last job's value covers the whole container.
+        results.append(
+            {**result, "container": container, "container_s": time.monotonic() - started}
+        )
     return results
 
 

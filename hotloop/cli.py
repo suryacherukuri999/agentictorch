@@ -18,6 +18,11 @@ def target_names() -> list[str]:
     return targets.names() + [f"bench-{c.name}" for c in bench.cases()]
 
 
+def gpu_type(name: str) -> str | None:
+    """A Modal GPU type, or None for a CPU-only container ("cpu"), to test setups cheaply."""
+    return None if name == "cpu" else name
+
+
 def load_target(name: str) -> targets.Target:
     if name.startswith("bench-"):
         return bench.target(bench.case(name.removeprefix("bench-")))
@@ -63,7 +68,7 @@ def cmd_measure(args) -> None:
     runs = modal_runner.measure(
         target,
         repo,
-        gpu=args.gpu,
+        gpu=gpu_type(args.gpu),
         extra_args=args.extra_args,
         steps=args.steps,
         warmup=args.warmup,
@@ -82,7 +87,7 @@ def cmd_profile(args) -> None:
     [run] = modal_runner.measure(
         target,
         repo,
-        gpu=args.gpu,
+        gpu=gpu_type(args.gpu),
         extra_args=args.extra_args,
         seeds=(0,),
         steps=args.steps,
@@ -102,7 +107,7 @@ def cmd_ab(args) -> None:
         target,
         modal_runner.Job(working_copy(target, args.baseline), args.base_args),
         modal_runner.Job(working_copy(target, args.candidate), args.cand_args),
-        gpu=args.gpu,
+        gpu=gpu_type(args.gpu),
         verbose=args.verbose,
     )
     path = workspace.save_ab(
@@ -124,7 +129,9 @@ def cmd_run(args) -> None:
     target = load_target(args.target)
     who = "rules" if args.setup == "rules" else args.model
     label = f"{args.setup}-{who}-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}"
-    session = Session(target, working_copy(target, label), gpu=args.gpu, rounds=args.rounds)
+    session = Session(
+        target, working_copy(target, label), gpu=gpu_type(args.gpu), rounds=args.rounds
+    )
     if args.setup == "rules":
         changes = rules.apply(session.repo)
         result = loop.Run(session, "rules", [], "; ".join(changes) or None, None, {})
