@@ -32,7 +32,7 @@ def load_target(name: str) -> targets.Target:
 def working_copy(target: targets.Target, label: str) -> Path:
     if target.name.startswith("bench-"):
         return bench.working_copy(bench.case(target.name.removeprefix("bench-")), label)
-    return working_copy(target, label)
+    return workspace.working_copy(target, label)
 
 
 def describe(label: str, m: Measurement) -> str:

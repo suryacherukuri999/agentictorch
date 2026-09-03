@@ -1,0 +1,14 @@
+# JointBERT (monologg/JointBERT): BERT fine-tuned for intent and slot filling on ATIS,
+# with the README's command. The data ships with the repo; the BERT weights are
+# cached in the volume and loaded offline.
+repo = "https://github.com/monologg/JointBERT"
+commit = "00324f60dda4a491b2913bc3065ae93966caea3f"
+command = "TOKENIZERS_PARALLELISM=false HF_HOME=hf HF_HUB_OFFLINE=1 python main.py --task atis --model_type bert --model_dir atis_model --do_train"
+
+[image]
+pip = ["transformers==5.20.2", "seqeval", "pytorch-crf"]
+
+[data]
+dataset = "hf-bert-base-uncased"
+path = "hf"
+download = "HF_HOME=. python -c \"from transformers import BertModel, BertTokenizer; BertTokenizer.from_pretrained('bert-base-uncased'); BertModel.from_pretrained('bert-base-uncased')\" && rm -rf xet"
