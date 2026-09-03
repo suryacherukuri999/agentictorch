@@ -73,6 +73,7 @@ class Session:
         diff = self.diff()
         if not diff:
             raise ToolError("nothing has changed since the last kept version")
+        self._check_syntax()
         with self._exported("HEAD") as best:
             base, cand = modal_runner.ab(self.target, Job(best), Job(self.repo), gpu=self.gpu)
         base, cand = Measurement(base), Measurement(cand)
@@ -96,6 +97,15 @@ class Session:
         base, cand = Measurement(base), Measurement(cand)
         diff = self._git("diff", self.original, "HEAD")
         return Attempt("all kept changes", diff, decide(base, cand), base, cand)
+
+    def _check_syntax(self) -> None:
+        """Catch Python syntax errors locally instead of spending a GPU round on them."""
+        for path in self._git("diff", "--name-only").split():
+            if path.endswith(".py"):
+                try:
+                    compile((self.repo / path).read_bytes(), path, "exec")
+                except SyntaxError as e:
+                    raise ToolError(f"syntax error in {path} line {e.lineno}: {e.msg}") from None
 
     @contextlib.contextmanager
     def _exported(self, rev: str):

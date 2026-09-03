@@ -76,3 +76,10 @@ def test_final_compares_the_original_with_everything_kept(session):
     final = session.final()
     assert final.verdict.keep
     assert "+speed = 'FAST'" in final.diff
+
+
+def test_syntax_errors_are_caught_before_spending_a_round(session):
+    apply_edit(session.repo, "train.py", "speed = 'SLOW'", "speed = ('SLOW'")
+    with pytest.raises(ToolError, match="syntax error in train.py line 1"):
+        session.benchmark("broken")
+    assert session.attempts == []

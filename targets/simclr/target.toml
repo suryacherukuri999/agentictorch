@@ -1,0 +1,12 @@
+# SimCLR (Spijkervet/SimCLR): contrastive pretraining of ResNet-18 on CIFAR-10 at
+# 224x224, with the repo's default config (python main.py).
+repo = "https://github.com/Spijkervet/SimCLR"
+commit = "2738efae85b3ca1b70b7919c5d7a7837d9d75235"
+command = "python main.py"
+
+[image]
+pip = ["pyyaml", "tensorboard"]
+
+[data]
+dataset = "cifar10"
+path = "datasets"

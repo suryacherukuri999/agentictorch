@@ -87,6 +87,7 @@ class Toolbox:
         self.allowed = allowed
         self.index = index  # the knowledge base, loaded lazily because the models are slow to load
         self.sources: dict[str, str] = {}  # url -> title, for every doc the model was shown
+        self.profiles = 0  # the model's own profile calls; the baseline profile doesn't count
         self.finished: str | None = None
 
     def call(self, name: str, arguments: str) -> str:
@@ -125,8 +126,9 @@ class Toolbox:
         return "\n\n".join(out)
 
     def _profile(self) -> str:
-        if len(self.session.profiles) >= MAX_PROFILES:
+        if self.profiles >= MAX_PROFILES:
             raise ToolError("already profiled twice in this run")
+        self.profiles += 1
         return self.session.profile()
 
     def _run_benchmark(self, description: str) -> str:
