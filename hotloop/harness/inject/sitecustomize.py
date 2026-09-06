@@ -13,8 +13,9 @@ It does nothing unless HOTLOOP_OUT is set. Then, once torch is imported, it:
 - after HOTLOOP_WARMUP + HOTLOOP_STEPS steps, writes JSON to HOTLOOP_OUT and exits.
 
 With HOTLOOP_PROFILE set to a directory, it also runs the PyTorch profiler over
-the measured steps and saves the trace and per-op table there. The profiler
-slows training, so step times from those runs are only for diagnosis.
+the measured steps and saves the trace and per-op table there, with the repo
+line behind each op and each host-device sync (HOTLOOP_REPO is the repo root).
+The profiler slows training, so step times from those runs are only for diagnosis.
 
 This file runs inside the target's environment, so it uses only the standard
 library, torch and (if present) numpy.
@@ -22,6 +23,7 @@ library, torch and (if present) numpy.
 
 import atexit
 import contextlib
+import functools
 import importlib.abc
 import importlib.util
 import itertools
@@ -33,6 +35,10 @@ import random
 import sys
 import time
 import traceback
+import warnings
+
+SYNC_WARNING = "called a synchronizing CUDA operation"
+LINE_TAG = "hotloop:line:"
 
 
 class _State:
@@ -42,7 +48,11 @@ class _State:
         self.steps = int(os.environ.get("HOTLOOP_STEPS", "50"))
         self.seed = int(os.environ.get("HOTLOOP_SEED", "0"))
         self.profile_dir = os.environ.get("HOTLOOP_PROFILE")
+        self.repo = os.path.realpath(os.environ.get("HOTLOOP_REPO") or os.getcwd())
         self.profiler = None
+        self.lines = None  # the torch function mode that tags ops with repo lines
+        self.syncs = {}  # repo line -> host-device syncs seen there while profiling
+        self.show_warning = None  # warnings.showwarning while syncs are being watched
         self.pid = os.getpid()
         self.clock = None
         self.step = 0
@@ -192,6 +202,7 @@ def _on_step(optimizer, args, kwargs):
         if _state.profile_dir:
             _start_profiler()
     elif _state.step == _state.warmup + _state.steps:
+        _stop_watching_syncs()  # our own sync below is not the repo's
         _sync()
         _state.stamps.append(time.perf_counter())
         _finish()
@@ -260,29 +271,181 @@ def _start_profiler():
         activities.append(ProfilerActivity.CUDA)
     _state.profiler = profile(activities=activities)
     _state.profiler.start()
+    if not _compiled():
+        _state.lines = _repo_lines_mode()
+        _state.lines.__enter__()
+    if _cuda_in_use():
+        _watch_syncs()
+
+
+def _compiled():
+    """True if the repo already uses torch.compile; the line-tagging mode is skipped
+    then, since compiled code shouldn't be traced through it."""
+    try:
+        from torch._dynamo.utils import counters
+
+        return counters["stats"]["unique_graphs"] > 0
+    except Exception:
+        return False
+
+
+def _repo_lines_mode():
+    """A torch function mode that runs each torch call made from repo code inside
+    a profiler range named after the calling line, so every op in the trace can
+    be traced back to the exact line.
+
+    Stacks from with_stack=True can't do this: on PyTorch 2.14 they name each
+    frame by its function's def line, or by the line it was on when profiling
+    started, not by the line that ran the op.
+    """
+    import torch
+
+    class RepoLines(torch.overrides.TorchFunctionMode):
+        def __torch_function__(self, func, types, args=(), kwargs=None):
+            where = _calling_line(sys._getframe(1))
+            if where is None:
+                return func(*args, **(kwargs or {}))
+            with torch.profiler.record_function(LINE_TAG + where):
+                return func(*args, **(kwargs or {}))
+
+    return RepoLines()
+
+
+def _calling_line(frame):
+    while frame is not None:
+        where = _in_repo(frame.f_code.co_filename, frame.f_lineno)
+        if where:
+            return where
+        frame = frame.f_back
+    return None
+
+
+def _watch_syncs():
+    """Count each host-device sync under the repo line that caused it.
+
+    CUDA's sync debug mode warns on every synchronizing call, which also
+    catches implicit syncs such as float(loss) or `if loss < best:`.
+    """
+    previous = warnings.showwarning
+
+    def show(message, category, filename, lineno, file=None, line=None):
+        if SYNC_WARNING not in str(message):
+            return previous(message, category, filename, lineno, file, line)
+        where = _calling_line(sys._getframe(1))
+        _state.syncs[where] = _state.syncs.get(where, 0) + 1
+
+    _state.show_warning = previous
+    warnings.showwarning = show
+    warnings.filterwarnings("always", message=f".*{SYNC_WARNING}")
+    sys.modules["torch"].cuda.set_sync_debug_mode("warn")
+
+
+def _stop_watching_syncs():
+    if _state.show_warning is None:
+        return
+    sys.modules["torch"].cuda.set_sync_debug_mode("default")
+    warnings.showwarning = _state.show_warning
+    _state.show_warning = None
+
+
+def _in_repo(path, line):
+    """`path:line` relative to the repo root if the file is inside the repo, else None."""
+    full = _resolve(path)
+    if full and full.startswith(_state.repo + os.sep):
+        return f"{os.path.relpath(full, _state.repo)}:{line}"
+    return None
+
+
+@functools.cache
+def _resolve(path):
+    # A script run as `python train.py` has the relative path train.py.
+    candidates = [path] if os.path.isabs(path) else [os.path.join(b or ".", path) for b in sys.path]
+    for candidate in candidates:
+        if os.path.isfile(candidate):
+            return os.path.realpath(candidate)
+    return None
+
+
+def _op_lines(events):
+    """The repo line behind each profiled event: its enclosing tagged range, or, for
+    backward ops, the forward op that created them (matched by autograd's
+    sequence number, since backward ops run on another thread)."""
+
+    def tagged(e):
+        while e is not None:
+            if e.name.startswith(LINE_TAG):
+                return e.name[len(LINE_TAG) :]
+            e = e.cpu_parent
+        return None
+
+    forward = {
+        (e.thread, e.sequence_nr): tagged(e)
+        for e in events
+        if e.sequence_nr >= 0 and not e.fwd_thread
+    }
+    lines = {}
+    for e in events:
+        node, where, backward = e, None, False
+        while node is not None:
+            if node.fwd_thread and node.sequence_nr >= 0:
+                where, backward = forward.get((node.fwd_thread, node.sequence_nr)), True
+                break
+            if node.name.startswith(LINE_TAG):
+                where = node.name[len(LINE_TAG) :]
+                break
+            node = node.cpu_parent
+        lines[e.id] = (where, backward)
+    # Ranges that PyTorch opens itself (an optimizer step, a DataLoader fetch) sit
+    # outside any tagged call; give them the line of the first tagged op inside.
+    for e in events:
+        if lines[e.id][0] is None:
+            lines[e.id] = (_first_tagged_child(e, lines), False)
+    return lines
+
+
+def _first_tagged_child(event, lines):
+    pending = list(event.cpu_children)
+    while pending:
+        child = pending.pop(0)
+        where, backward = lines.get(child.id, (None, False))
+        if where and not backward:
+            return where
+        pending.extend(child.cpu_children)
+    return None
 
 
 def _save_profile():
+    from torch.autograd import DeviceType
+
+    _stop_watching_syncs()
+    if _state.lines is not None:
+        _state.lines.__exit__(None, None, None)
     prof = _state.profiler
     prof.stop()
     os.makedirs(_state.profile_dir, exist_ok=True)
     prof.export_chrome_trace(os.path.join(_state.profile_dir, "trace.json"))
-    from torch.autograd import DeviceType
-
-    # Kernels also appear as their own entries; keep only the ops that launch
-    # them, so device time isn't counted twice.
-    ops = [
-        {
-            "name": e.key,
-            "count": e.count,
-            "self_cpu_us": e.self_cpu_time_total,
-            "self_device_us": e.self_device_time_total,
-        }
-        for e in prof.key_averages()
-        if e.device_type == DeviceType.CPU
-    ]
-    with open(os.path.join(_state.profile_dir, "ops.json"), "w") as f:
-        json.dump(ops, f)
+    # Kernels also appear as their own events, and our line tags as ranges; keep
+    # only the ops that launch kernels, so device time isn't counted twice.
+    events = prof.events()
+    lines = _op_lines(events)
+    ops = {}
+    for e in events:
+        if e.device_type != DeviceType.CPU or e.name.startswith(LINE_TAG):
+            continue
+        where, backward = lines[e.id]
+        key = (e.name, where, backward)
+        op = ops.setdefault(
+            key,
+            {"name": e.name, "where": where, "backward": backward, "count": 0,
+             "self_cpu_us": 0.0, "self_device_us": 0.0},
+        )  # fmt: skip
+        op["count"] += 1
+        op["self_cpu_us"] += e.self_cpu_time_total
+        op["self_device_us"] += e.self_device_time_total
+    syncs = [{"where": where, "count": n} for where, n in _state.syncs.items()]
+    for name, data in (("ops.json", list(ops.values())), ("syncs.json", syncs)):
+        with open(os.path.join(_state.profile_dir, name), "w") as f:
+            json.dump(data, f)
 
 
 def _finish():

@@ -54,6 +54,7 @@ def run(
             "HOTLOOP_STEPS": str(steps),
             "HOTLOOP_WARMUP": str(warmup),
             "HOTLOOP_SEED": str(seed),
+            "HOTLOOP_REPO": str(Path(cwd).resolve()),
         }
         if profile:
             run_env["HOTLOOP_PROFILE"] = str(profile_dir)
@@ -89,7 +90,7 @@ def run(
             "log_tail": tail(log.read_bytes().decode(errors="replace")),
         }
         if (profile_dir / "trace.json").exists():
-            summarized = summary.load(profile_dir, steps)
+            summarized = summary.load(profile_dir, steps, repo=Path(cwd))
             result["profile"] = asdict(summarized)
             result["profile_text"] = summary.render(summarized)
     return result

@@ -119,3 +119,17 @@ def test_profile_run_summarizes_the_measured_steps():
     assert profile["data_wait"] > 0.3
     assert profile["top_ops"]
     assert "waiting on the DataLoader" in result["profile_text"]
+
+
+def test_profile_names_the_exact_repo_line_behind_each_op():
+    command = f"{sys.executable} tiny_train.py"
+    result = runner.run(command, FIXTURES, steps=5, warmup=3, timeout=120, profile=True)
+    ops = {op["name"]: op for op in result["profile"]["top_ops"]}
+    forward_line = "tiny_train.py:55"  # loss = nn.functional.mse_loss(model(x), y)
+    assert ops["aten::addmm"]["where"] == forward_line
+    assert not ops["aten::addmm"]["backward"]
+    backward = [op for op in result["profile"]["top_ops"] if op["backward"]]
+    assert backward and all(op["where"] == forward_line for op in backward)
+    # A range PyTorch opens itself gets the line of the call that opened it.
+    assert ops["Optimizer.step#SGD.step"]["where"] == "tiny_train.py:58"
+    assert "at tiny_train.py:58: scaler.step(opt)" in result["profile_text"]
