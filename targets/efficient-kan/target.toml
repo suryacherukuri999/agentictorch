@@ -1,0 +1,12 @@
+# efficient-kan (Blealtan/efficient-kan): a KAN on MNIST, the repo's example script.
+# PYTHONPATH is extended, not replaced, so the harness still loads.
+repo = "https://github.com/Blealtan/efficient-kan"
+commit = "7b6ce1c87f18c8bc90c208f6b494042344216b11"
+command = "PYTHONPATH=src:$PYTHONPATH python examples/mnist.py"
+
+[image]
+pip = ["tqdm"]
+
+[data]
+dataset = "mnist"
+path = "data"

@@ -1,0 +1,13 @@
+# nerf-pytorch (yenchenlin/nerf-pytorch): NeRF on the Blender lego scene, with the
+# README's command and config.
+repo = "https://github.com/yenchenlin/nerf-pytorch"
+commit = "63a5a630c9abd62b0f21c08703d0ac2ea7d4b9dd"
+command = "python run_nerf.py --config configs/lego.txt"
+
+[image]
+pip = ["imageio", "imageio-ffmpeg", "matplotlib", "configargparse", "tensorboard", "tqdm", "opencv-python-headless"]
+
+[data]
+dataset = "nerf-example-data"
+path = "data"
+download = "python -c \"import urllib.request, zipfile; urllib.request.urlretrieve('https://cseweb.ucsd.edu/~viscomp/projects/LF/papers/ECCV20/nerf/nerf_example_data.zip', 'data.zip'); zipfile.ZipFile('data.zip').extractall('.')\" && rm data.zip"
