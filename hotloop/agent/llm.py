@@ -35,6 +35,8 @@ class Model:
     key_env: str | None = None
     usd_per_m_input: float = 0.0
     usd_per_m_output: float = 0.0
+    temperature: float = 0.0
+    reasoning_effort: str | None = None  # for thinking models; omitted when None
 
     @property
     def paid(self) -> bool:
@@ -56,8 +58,10 @@ def chat(model: Model, messages: list[dict], tools: list[dict], max_tokens: int 
         "messages": messages,
         "tools": tools,
         "max_tokens": max_tokens,
-        "temperature": 0,
+        "temperature": model.temperature,
     }
+    if model.reasoning_effort:
+        request["reasoning_effort"] = model.reasoning_effort
     key = hashlib.sha256(json.dumps([model.base_url, request], sort_keys=True).encode())
     cached = CACHE / f"{key.hexdigest()}.json"
     if cached.exists():
@@ -110,9 +114,12 @@ def _post(model: Model, request: dict, attempts: int = 6) -> dict:
             with urllib.request.urlopen(http, timeout=600) as response:
                 return json.load(response)
         except urllib.error.HTTPError as e:
-            if e.code not in (429, 500, 502, 503) or attempt == attempts - 1:
+            # Rate limits and overload pass; a 500 can be a request the model always
+            # fails on (a local model that never stops reasoning), so retry it once.
+            transient = e.code in (429, 502, 503) or (e.code == 500 and attempt == 0)
+            if not transient or attempt == attempts - 1:
                 raise RuntimeError(f"{model.name}: HTTP {e.code}: {e.read()[:500]!r}") from None
-            time.sleep(min(2**attempt * 5, 120))  # rate-limited or overloaded: back off
+            time.sleep(min(2**attempt * 5, 120))
     raise AssertionError("unreachable")
 
 

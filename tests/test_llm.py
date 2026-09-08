@@ -55,3 +55,11 @@ def test_keys_are_read_from_the_env_file(monkeypatch):
     llm.KEYS.write_text("OTHER=1\nEXAMPLE_KEY=sk-test\n")
     assert llm.api_key("EXAMPLE_KEY") == "sk-test"
     assert llm.api_key("MISSING") is None
+
+
+def test_sends_sampling_settings_for_thinking_models(isolated):
+    model = llm.Model("thinker", "http://x", temperature=0.6, reasoning_effort="low")
+    llm.chat(model, [{"role": "user", "content": "hi"}], tools=[])
+    llm.chat(FREE, [{"role": "user", "content": "hi"}], tools=[])
+    assert isolated[0]["temperature"] == 0.6 and isolated[0]["reasoning_effort"] == "low"
+    assert "reasoning_effort" not in isolated[1]
