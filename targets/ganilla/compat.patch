@@ -1,0 +1,19 @@
+diff --git a/util/visualizer.py b/util/visualizer.py
+index 78c4ad4..bd7a4e6 100755
+--- a/util/visualizer.py
++++ b/util/visualizer.py
+@@ -5,7 +5,13 @@ import ntpath
+ import time
+ from . import util
+ from . import html
+-from scipy.misc import imresize
++from PIL import Image
++
++
++def imresize(im, size, interp='bilinear'):
++    # scipy.misc.imresize was removed in SciPy 1.3; this keeps its (height, width) order.
++    resample = {'bilinear': Image.BILINEAR, 'bicubic': Image.BICUBIC}[interp]
++    return np.array(Image.fromarray(im).resize((size[1], size[0]), resample))
+ 
+ if sys.version_info[0] == 2:
+     VisdomExceptionBase = Exception

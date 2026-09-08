@@ -1,0 +1,14 @@
+# GANILLA (giddyyupp/ganilla): CycleGAN training with the GANILLA generator, using the
+# README's command on the small facades dataset (35 MB) instead of maps (1.5 GB).
+# --display_id 0 turns off the visdom display, which would wait for a visdom server.
+repo = "https://github.com/giddyyupp/ganilla"
+commit = "f84a17fc759470595d2ef77d04fcc656658e0f04"
+command = "python train.py --dataroot ./datasets/facades --name facades_cyclegan --model cycle_gan --netG resnet_fpn --display_id 0"
+
+[image]
+pip = ["dominate", "visdom", "scipy"]
+
+[data]
+dataset = "cyclegan-facades"
+path = "datasets"
+download = "python -c \"import urllib.request, zipfile; urllib.request.urlretrieve('https://efrosgans.eecs.berkeley.edu/cyclegan/datasets/facades.zip', 'facades.zip'); zipfile.ZipFile('facades.zip').extractall('.')\" && rm facades.zip"
