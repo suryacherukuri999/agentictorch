@@ -1,0 +1,135 @@
+{
+ "checked": "2026-10-25",
+ "repos": [
+  {
+   "repo": "lucidrains/transfusion-pytorch",
+   "last_outside_merge": "2026-01-27",
+   "outside_merges_6_months": 0,
+   "outside_merges_12_months": 3,
+   "latest": [
+    {
+     "number": 50,
+     "merged": "2026-01-27",
+     "author": "pranoyr",
+     "title": "implement unconditional KV caching"
+    },
+    {
+     "number": 49,
+     "merged": "2026-01-23",
+     "author": "pranoyr",
+     "title": "match null token sequence length to prompt for correct CFG alignment"
+    },
+    {
+     "number": 48,
+     "merged": "2026-01-19",
+     "author": "pranoyr",
+     "title": "added classifier free guidance"
+    }
+   ]
+  },
+  {
+   "repo": "lucidrains/rectified-flow-pytorch",
+   "last_outside_merge": "2026-10-07",
+   "outside_merges_6_months": 11,
+   "outside_merges_12_months": 17,
+   "latest": [
+    {
+     "number": 50,
+     "merged": "2026-10-07",
+     "author": "Afloat16",
+     "title": "Keep NanoFlow inversion in normalized flow coordinates"
+    },
+    {
+     "number": 49,
+     "merged": "2026-09-22",
+     "author": "Anai-Guo",
+     "title": "fix(reflow): add the imports ReflowTrainer needs (math, rearrange, save_image, divisible_by)"
+    },
+    {
+     "number": 47,
+     "merged": "2026-08-02",
+     "author": "pranoyr",
+     "title": "fix: ensure XMWrapper candidates share the same time step"
+    }
+   ]
+  },
+  {
+   "repo": "lucidrains/x-transformers",
+   "last_outside_merge": "2026-10-05",
+   "outside_merges_6_months": 9,
+   "outside_merges_12_months": 10,
+   "latest": [
+    {
+     "number": 374,
+     "merged": "2026-10-05",
+     "author": "MohammadHijjawi97",
+     "title": "fix XValAutoregressiveWrapper crashing on a full-length padding mask"
+    },
+    {
+     "number": 373,
+     "merged": "2026-10-04",
+     "author": "MohammadHijjawi97",
+     "title": "fix `AutoregressiveWrapper.beam_search` crashing when `prompt_lens` is passed"
+    },
+    {
+     "number": 365,
+     "merged": "2026-10-01",
+     "author": "MohammadHijjawi97",
+     "title": "fix contrastive decoding in AutoregressiveWrapper.generate"
+    }
+   ]
+  },
+  {
+   "repo": "lucidrains/vit-pytorch",
+   "last_outside_merge": "2026-08-30",
+   "outside_merges_6_months": 4,
+   "outside_merges_12_months": 8,
+   "latest": [
+    {
+     "number": 370,
+     "merged": "2026-08-30",
+     "author": "tandede",
+     "title": "Fix decorrelation loss token sampling"
+    },
+    {
+     "number": 366,
+     "merged": "2026-06-22",
+     "author": "pranoyr",
+     "title": "Adding vit-5   "
+    },
+    {
+     "number": 365,
+     "merged": "2026-06-13",
+     "author": "pranoyr",
+     "title": "added the supernetwork for two stage distillation"
+    }
+   ]
+  },
+  {
+   "repo": "lucidrains/denoising-diffusion-pytorch",
+   "last_outside_merge": "2026-09-29",
+   "outside_merges_6_months": 1,
+   "outside_merges_12_months": 2,
+   "latest": [
+    {
+     "number": 373,
+     "merged": "2026-09-29",
+     "author": "Afloat16",
+     "title": "fix: route conditions consistently in 1D diffusion"
+    },
+    {
+     "number": 363,
+     "merged": "2026-02-11",
+     "author": "Mr-Neutr0n",
+     "title": "Fix min-SNR loss weight clamp direction in continuous time diffusion"
+    },
+    {
+     "number": 358,
+     "merged": "2025-08-04",
+     "author": "migolan",
+     "title": "fix deprecated sdpa_kernel usage"
+    }
+   ]
+  }
+ ]
+}
