@@ -1,0 +1,14 @@
+# vit-pytorch (lucidrains): the repo's train_vit_decorr.py example, a ViT on CIFAR-100.
+# A pull request target: the maintainer merged outside pull requests in the last
+# 12 months (results/survey/maintainers.json).
+repo = "https://github.com/lucidrains/vit-pytorch"
+commit = "86c8b9af00465ad1aead9834ae6d79a839ebe2ac"
+command = "python train_vit_decorr.py"
+
+[image]
+pip = ["einops>=0.8.2", "accelerate"]
+
+[data]
+dataset = "cifar100"
+path = "data"
+download = "python -c \"from torchvision.datasets import CIFAR100; CIFAR100('.', download=True)\" && rm cifar-100-python.tar.gz"
