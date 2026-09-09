@@ -83,3 +83,28 @@ def test_syntax_errors_are_caught_before_spending_a_round(session):
     with pytest.raises(ToolError, match="syntax error in train.py line 1"):
         session.benchmark("broken")
     assert session.attempts == []
+
+
+def test_quick_check_uses_no_round_and_returns_the_log_on_a_crash(session, monkeypatch):
+    calls = []
+
+    def measure(target, repo, gpu, seeds, steps, warmup):
+        calls.append(repo)
+        crashed = "BROKEN" in (repo / "train.py").read_text()
+        run = fake_run(repo, 0, "c0") | {"completed": not crashed}
+        if crashed:
+            run |= {
+                "error": "NameError: x",
+                "log_tail": 'File "/work/repo0/train.py", line 1\nNameError: x',
+            }
+        return [run]
+
+    monkeypatch.setattr(session_module.modal_runner, "measure", measure)
+    with pytest.raises(ToolError, match="nothing has changed"):
+        session.check()
+    apply_edit(session.repo, "train.py", "SLOW", "BROKEN")
+    text = session.check()
+    assert text.startswith("failed: NameError: x")
+    assert 'File "train.py", line 1' in text
+    assert session.rounds_left == session.rounds
+    assert calls == [session.repo]  # the working tree itself, edits included

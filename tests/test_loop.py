@@ -6,8 +6,10 @@ import pytest
 from hotloop.agent import llm, loop
 from hotloop.agent import session as session_module
 from hotloop.agent.session import Session
+from hotloop.agent.tools import MAX_CHECKS, Toolbox
 from hotloop.measurement import Measurement
 from hotloop.targets import Target
+from hotloop.tools.files import apply_edit
 
 
 def run_for(repo, seed, container):
@@ -102,3 +104,30 @@ def test_blind_setup_makes_one_patch_and_measures_it_afterwards(session, monkeyp
     assert seen[1][1][-1]["content"] == "error: run_benchmark is not available"
     assert len(session.attempts) == 1
     assert result.final.verdict.speedup == pytest.approx(2.0)
+
+
+def test_a_failed_benchmark_shows_the_model_the_end_of_the_log(session, monkeypatch):
+    def ab(target, base, cand, gpu):
+        log = 'File "/work/repo1/train.py", line 2, in step\nRuntimeError: boom'
+        crashed = {"completed": False, "seed": 0, "gpu": "NVIDIA L4", "container": "c0",
+                   "error": "RuntimeError: boom", "log_tail": log}  # fmt: skip
+        good = run_for(base.repo_dir, 0, "c0")
+        return [good, run_for(base.repo_dir, 1, "c1")], [
+            crashed,
+            crashed | {"seed": 1, "container": "c1"},
+        ]
+
+    monkeypatch.setattr(session_module.modal_runner, "ab", ab)
+    toolbox = Toolbox(session)
+    apply_edit(session.repo, "train.py", "SLOW", "FAST")
+    text = toolbox.call("run_benchmark", json.dumps({"description": "x"}))
+    assert text.startswith("reverted: run failed: RuntimeError: boom")
+    assert 'File "train.py", line 2, in step' in text
+
+
+def test_quick_checks_are_capped(session, monkeypatch):
+    monkeypatch.setattr(session_module.Session, "check", lambda self: "ok")
+    toolbox = Toolbox(session)
+    outputs = [toolbox.call("quick_check", "{}") for _ in range(MAX_CHECKS + 1)]
+    assert outputs[:-1] == ["ok"] * MAX_CHECKS
+    assert outputs[-1].startswith("error: already ran")

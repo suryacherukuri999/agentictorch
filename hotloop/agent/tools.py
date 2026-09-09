@@ -7,6 +7,7 @@ from hotloop.tools import files
 from hotloop.tools.files import ToolError
 
 MAX_PROFILES = 2
+MAX_CHECKS = 5
 DOC_CHARS = 700
 
 
@@ -65,6 +66,13 @@ SCHEMAS = [
         [],
     ),
     _schema(
+        "quick_check",
+        "Run your edits for a few steps on the GPU to catch crashes before run_benchmark. "
+        "Uses no benchmark round and says nothing about speed. At most 5 per run.",
+        {},
+        [],
+    ),
+    _schema(
         "run_benchmark",
         "Measure your edits against the best version so far on the GPU. The change is "
         "kept only if it is faster beyond noise with the same loss; otherwise your "
@@ -88,6 +96,7 @@ class Toolbox:
         self.index = index  # the knowledge base, loaded lazily because the models are slow to load
         self.sources: dict[str, str] = {}  # url -> title, for every doc the model was shown
         self.profiles = 0  # the model's own profile calls; the baseline profile doesn't count
+        self.checks = 0
         self.finished: str | None = None
 
     def call(self, name: str, arguments: str) -> str:
@@ -131,15 +140,24 @@ class Toolbox:
         self.profiles += 1
         return self.session.profile()
 
+    def _quick_check(self) -> str:
+        if self.checks >= MAX_CHECKS:
+            raise ToolError(f"already ran {MAX_CHECKS} quick checks in this run")
+        self.checks += 1
+        return self.session.check()
+
     def _run_benchmark(self, description: str) -> str:
         attempt = self.session.benchmark(description)
         v = attempt.verdict
         outcome = "kept" if v.keep else "reverted"
-        return (
+        text = (
             f"{outcome}: {v.reason}. Best version now runs at "
             f"{(attempt.candidate if v.keep else attempt.baseline).mean_step_ms:.1f} ms/step. "
             f"{self.session.rounds_left} benchmark rounds left."
         )
+        if not attempt.candidate.completed:
+            text += f"\nlast lines of the failed run's log:\n{attempt.candidate.failure_log()}"
+        return text
 
     def _finish(self, summary: str) -> str:
         self.finished = summary

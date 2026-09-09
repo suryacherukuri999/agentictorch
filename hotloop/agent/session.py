@@ -19,6 +19,11 @@ from hotloop.measurement import Measurement
 from hotloop.targets import Target
 from hotloop.tools.files import ToolError
 
+# A quick check runs this many steps: enough to get through start-up and a few
+# optimizer steps, far too few to say anything about speed.
+CHECK_WARMUP = 2
+CHECK_STEPS = 3
+
 
 @dataclass(frozen=True)
 class Attempt:
@@ -65,6 +70,25 @@ class Session:
 
     def diff(self) -> str:
         return self._git("diff")
+
+    def check(self) -> str:
+        """Run the working tree for a few steps to catch crashes. Uses no benchmark round."""
+        if not self.diff():
+            raise ToolError("nothing has changed since the last kept version")
+        self._check_syntax()
+        [run] = modal_runner.measure(
+            self.target,
+            self.repo,
+            gpu=self.gpu,
+            seeds=(0,),
+            steps=CHECK_STEPS,
+            warmup=CHECK_WARMUP,
+        )
+        result = Measurement([run])
+        if result.completed:
+            steps = CHECK_WARMUP + CHECK_STEPS
+            return f"ran {steps} steps without errors (too short to measure speed)"
+        return f"failed: {result.failure()}\nlast lines of the log:\n{result.failure_log()}"
 
     def benchmark(self, description: str) -> Attempt:
         """Measure the working tree against the best version, then keep or revert it."""

@@ -1,6 +1,7 @@
 """Summaries of harness runs: one Measurement is one configuration run once per seed."""
 
 import math
+import re
 from dataclasses import dataclass
 from statistics import mean
 
@@ -87,4 +88,13 @@ class Measurement:
             if r.get("steps") is not None:
                 return f"stopped after {r['steps']} measured steps (exit code {exit_code})"
             return f"no results (exit code {exit_code})"
+        return ""
+
+    def failure_log(self, lines: int = 15) -> str:
+        """The end of the first failed run's log, with container paths made relative
+        to the repo, so a traceback reads as repo file and line."""
+        for r in self.runs:
+            if not r.get("completed"):
+                tail = (r.get("log_tail") or "").splitlines()[-lines:]
+                return re.sub(r"/work/repo\d+/", "", "\n".join(tail))
         return ""

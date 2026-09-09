@@ -17,9 +17,10 @@ SYSTEM = """You make PyTorch training code faster without changing what it compu
 
 How to work:
 - Start from the measurements and hints you are given, and read the training code before editing.
-- Make one focused change at a time, then call run_benchmark. It measures your edits against
-  the best version so far on the GPU and keeps them only if they are faster beyond noise with
-  the same loss. Otherwise they are reverted.
+- Make one focused change at a time. Use quick_check to make sure it runs (it uses no round),
+  then call run_benchmark. It measures your edits against the best version so far on the GPU
+  and keeps them only if they are faster beyond noise with the same loss. Otherwise they are
+  reverted.
 - Use search_docs to check how to apply a fix correctly, for example mixed precision,
   DataLoader workers, pinned memory, fused optimizers or torch.compile.
 - Don't change the model, the data, the batch size, the learning rate, the number of steps,
@@ -52,7 +53,9 @@ READ_AND_EDIT = ("list_files", "read_file", "search_code", "apply_edit", "finish
 SETUPS = {
     "llm": Setup("llm", READ_AND_EDIT, measured=False),
     "llm-kb": Setup("llm-kb", (*READ_AND_EDIT, "search_docs"), measured=False),
-    "agent": Setup("agent", (*READ_AND_EDIT, "search_docs", "profile", "run_benchmark"), True),
+    "agent": Setup(
+        "agent", (*READ_AND_EDIT, "search_docs", "profile", "quick_check", "run_benchmark"), True
+    ),
 }
 
 
