@@ -6,7 +6,7 @@ commit = "86c8b9af00465ad1aead9834ae6d79a839ebe2ac"
 command = "python train_vit_decorr.py"
 
 [image]
-pip = ["einops>=0.8.2", "accelerate"]
+pip = ["einops>=0.8.2", "accelerate", "wandb"]
 
 [data]
 dataset = "cifar100"
