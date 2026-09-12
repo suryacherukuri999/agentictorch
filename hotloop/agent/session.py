@@ -12,6 +12,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from hotloop import workspace
 from hotloop.agent.keep import Verdict, decide
 from hotloop.harness import modal_runner
 from hotloop.harness.modal_runner import Job
@@ -35,9 +36,12 @@ class Attempt:
 
 
 class Session:
-    def __init__(self, target: Target, repo: Path, gpu: str = "L4", rounds: int = 5):
+    def __init__(
+        self, target: Target, repo: Path, gpu: str = "L4", rounds: int = 5, label: str = "agent"
+    ):
         self.target = target
         self.repo = repo
+        self.label = label  # names the raw runs saved for each pair
         self.gpu = gpu
         self.rounds = rounds
         self.original = self._git("rev-parse", "HEAD").strip()
@@ -100,6 +104,8 @@ class Session:
         self._check_syntax()
         with self._exported("HEAD") as best:
             base, cand = modal_runner.ab(self.target, Job(best), Job(self.repo), gpu=self.gpu)
+        round_label = f"{self.label}-round{len(self.attempts) + 1}"
+        workspace.save_ab(self.target, f"{self.label}-best", round_label, base, cand, "", "")
         base, cand = Measurement(base), Measurement(cand)
         verdict = decide(base, cand)
         if verdict.keep:
@@ -118,6 +124,7 @@ class Session:
         """The original code against everything kept, as one last pair."""
         with self._exported(self.original) as original, self._exported("HEAD") as best:
             base, cand = modal_runner.ab(self.target, Job(original), Job(best), gpu=self.gpu)
+        workspace.save_ab(self.target, "original", f"{self.label}-final", base, cand, "", "")
         base, cand = Measurement(base), Measurement(cand)
         diff = self._git("diff", self.original, "HEAD")
         return Attempt("all kept changes", diff, decide(base, cand), base, cand)

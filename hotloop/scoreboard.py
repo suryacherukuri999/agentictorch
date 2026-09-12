@@ -40,6 +40,15 @@ def latest(setup: str) -> dict[str, dict]:
     return out
 
 
+def harmful_attempt(attempt: dict) -> bool:
+    """Would this change have hurt if it had been applied without measuring?"""
+    reason = attempt["reason"]
+    if reason.startswith(("run failed", "loss")):
+        return True
+    speedup = attempt.get("speedup")
+    return speedup is not None and speedup < HARM_MARGIN
+
+
 def outcome(record: dict, setup: str) -> tuple[float, bool]:
     """(speedup that ships, harmful). The agent ships only what passed the keep rule;
     the blind setups ship their patch whatever it does."""
@@ -47,8 +56,8 @@ def outcome(record: dict, setup: str) -> tuple[float, bool]:
         return record["speedup"], False
     if not record["attempts"]:
         return 1.0, False
-    reason = record["attempts"][-1]["reason"]
-    if reason.startswith(("run failed", "loss")):
+    patch = record["attempts"][-1]
+    if patch["reason"].startswith(("run failed", "loss")):
         return 1.0, True
     speedup = record["measured_speedup"]
     return speedup, speedup < HARM_MARGIN
@@ -78,5 +87,26 @@ def table() -> str:
     return "\n".join(lines)
 
 
+def totals() -> str:
+    """Per setup: targets run, harmful changes shipped and, for the agent, the harmful
+    attempts its keep rule caught and reverted."""
+    lines = [
+        "| Setup | Targets | Harmful changes shipped | Harmful attempts caught |",
+        "|---|---|---|---|",
+    ]
+    for setup in SETUPS:
+        records = latest(setup)
+        shipped = sum(outcome(r, setup)[1] for r in records.values())
+        caught = (
+            sum(harmful_attempt(a) for r in records.values() for a in r["attempts"])
+            if setup == "agent"
+            else ""
+        )
+        lines.append(f"| {setup} | {len(records)} | {shipped} | {caught} |")
+    return "\n".join(lines)
+
+
 if __name__ == "__main__":
     print(table())
+    print()
+    print(totals())

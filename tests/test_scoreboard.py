@@ -1,6 +1,6 @@
 import pytest
 
-from hotloop.scoreboard import outcome, recovered
+from hotloop.scoreboard import harmful_attempt, outcome, recovered
 
 
 def record(reason=None, measured=None, speedup=1.0):
@@ -24,3 +24,11 @@ def test_blind_patches_ship_whatever_they_do():
 
 def test_the_agent_ships_only_what_it_kept():
     assert outcome(record("run failed: SyntaxError", speedup=2.5), "agent") == (2.5, False)
+
+
+def test_harmful_attempts_are_crashes_loss_changes_and_slowdowns():
+    assert harmful_attempt({"reason": "run failed: NameError"})
+    assert harmful_attempt({"reason": "loss moved by 0.4, more than 0.1", "speedup": 1.5})
+    assert harmful_attempt({"reason": "0.90x is within noise", "speedup": 0.9})
+    assert not harmful_attempt({"reason": "1.01x is within noise", "speedup": 1.01})
+    assert not harmful_attempt({"reason": "1.50x faster, loss within noise", "speedup": 1.5})

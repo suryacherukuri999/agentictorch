@@ -54,6 +54,7 @@ def session(tmp_path, monkeypatch):
         return [b for b, _ in pairs], [c for _, c in pairs]
 
     monkeypatch.setattr(session_module.modal_runner, "ab", ab)
+    monkeypatch.setattr(session_module.workspace, "WORK", tmp_path / "work")
     s = Session(Target(name="t", command="python train.py"), repo, rounds=3)
     s.baseline = Measurement([run_for(repo, 0, "x"), run_for(repo, 1, "y")])
     return s

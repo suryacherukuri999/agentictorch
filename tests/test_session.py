@@ -40,6 +40,7 @@ def session(tmp_path, monkeypatch):
         return [b for b, _ in runs], [c for _, c in runs]
 
     monkeypatch.setattr(session_module.modal_runner, "ab", ab)
+    monkeypatch.setattr(session_module.workspace, "WORK", tmp_path / "work")
     return Session(Target(name="t", command="python train.py"), repo, rounds=2)
 
 

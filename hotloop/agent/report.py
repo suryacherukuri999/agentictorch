@@ -74,9 +74,24 @@ def summary(run: Run) -> dict:
         "speedup": final.verdict.speedup if final and final.verdict.keep else 1.0,
         "kept": [a.description for a in s.kept],
         "attempts": [
-            {"change": a.description, "keep": a.verdict.keep, "reason": a.verdict.reason}
+            {
+                "change": a.description,
+                "keep": a.verdict.keep,
+                "reason": a.verdict.reason,
+                "speedup": a.verdict.speedup,
+            }
             for a in s.attempts
         ],
+        # Per-run numbers of the final pair (original against everything kept), so
+        # the total can be checked without the raw runs.
+        "final_pair": {
+            "baseline_ms": final.baseline.step_ms if final.baseline.completed else None,
+            "candidate_ms": final.candidate.step_ms if final.candidate.completed else None,
+            "baseline_loss": final.baseline.loss,
+            "candidate_loss": final.candidate.loss,
+        }
+        if final
+        else None,
         "llm_cost": run.cost,
         "turns": run.turns,
         "tokens": run.tokens,

@@ -130,7 +130,7 @@ def cmd_run(args) -> None:
     who = "rules" if args.setup == "rules" else args.model
     label = f"{args.setup}-{who}-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}"
     session = Session(
-        target, working_copy(target, label), gpu=gpu_type(args.gpu), rounds=args.rounds
+        target, working_copy(target, label), gpu=gpu_type(args.gpu), rounds=args.rounds, label=label
     )
     if args.setup == "rules":
         changes = rules.apply(session.repo)
