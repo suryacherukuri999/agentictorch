@@ -37,6 +37,7 @@ class Model:
     usd_per_m_output: float = 0.0
     temperature: float = 0.0
     reasoning_effort: str | None = None  # for thinking models; omitted when None
+    max_tokens_field: str = "max_tokens"  # newer OpenAI models want max_completion_tokens
 
     @property
     def paid(self) -> bool:
@@ -57,7 +58,7 @@ def chat(model: Model, messages: list[dict], tools: list[dict], max_tokens: int 
         "model": model.name,
         "messages": messages,
         "tools": tools,
-        "max_tokens": max_tokens,
+        model.max_tokens_field: max_tokens,
         "temperature": model.temperature,
     }
     if model.reasoning_effort:
