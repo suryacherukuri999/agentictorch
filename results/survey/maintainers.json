@@ -3,6 +3,7 @@
  "repos": [
   {
    "repo": "lucidrains/transfusion-pytorch",
+   "stars": 1408,
    "last_outside_merge": "2026-01-27",
    "outside_merges_6_months": 0,
    "outside_merges_12_months": 3,
@@ -29,6 +30,7 @@
   },
   {
    "repo": "lucidrains/rectified-flow-pytorch",
+   "stars": 489,
    "last_outside_merge": "2026-10-07",
    "outside_merges_6_months": 11,
    "outside_merges_12_months": 17,
@@ -55,6 +57,7 @@
   },
   {
    "repo": "lucidrains/x-transformers",
+   "stars": 5960,
    "last_outside_merge": "2026-10-05",
    "outside_merges_6_months": 9,
    "outside_merges_12_months": 10,
@@ -81,6 +84,7 @@
   },
   {
    "repo": "lucidrains/vit-pytorch",
+   "stars": 25553,
    "last_outside_merge": "2026-08-30",
    "outside_merges_6_months": 4,
    "outside_merges_12_months": 8,
@@ -107,6 +111,7 @@
   },
   {
    "repo": "lucidrains/denoising-diffusion-pytorch",
+   "stars": 10716,
    "last_outside_merge": "2026-09-29",
    "outside_merges_6_months": 1,
    "outside_merges_12_months": 2,

@@ -3,7 +3,7 @@
 python -m hotloop.survey.activity [--save results/survey/maintainers.json] owner/repo ...
 
 Pull requests only go to repos that do. Read-only GitHub API calls with no login,
-one per repo (the unauthenticated limit is 60 an hour).
+two per repo (the unauthenticated limit is 60 an hour).
 """
 
 import json
@@ -17,16 +17,19 @@ from pathlib import Path
 INSIDERS = {"OWNER", "MEMBER", "COLLABORATOR"}
 
 
+def _get(url: str):
+    request = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json"})
+    with urllib.request.urlopen(request, timeout=60) as response:
+        return json.load(response)
+
+
 def outside_merges(repo: str) -> list[dict]:
     """Merged pull requests by people other than the maintainers, newest first,
     from the 100 most recently updated closed ones."""
-    url = (
+    pulls = _get(
         f"https://api.github.com/repos/{repo}/pulls"
         "?state=closed&sort=updated&direction=desc&per_page=100"
     )
-    request = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json"})
-    with urllib.request.urlopen(request, timeout=60) as response:
-        pulls = json.load(response)
     merged = [
         {
             "number": p["number"],
@@ -49,6 +52,7 @@ def summary(repo: str, today: datetime) -> dict:
 
     return {
         "repo": repo,
+        "stars": _get(f"https://api.github.com/repos/{repo}")["stargazers_count"],
         "last_outside_merge": merges[0]["merged"] if merges else None,
         "outside_merges_6_months": since(6),
         "outside_merges_12_months": since(12),

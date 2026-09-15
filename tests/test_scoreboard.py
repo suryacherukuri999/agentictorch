@@ -32,3 +32,66 @@ def test_harmful_attempts_are_crashes_loss_changes_and_slowdowns():
     assert harmful_attempt({"reason": "0.90x is within noise", "speedup": 0.9})
     assert not harmful_attempt({"reason": "1.01x is within noise", "speedup": 1.01})
     assert not harmful_attempt({"reason": "1.50x faster, loss within noise", "speedup": 1.5})
+
+
+def headline_record(target, recorded, speedup, keep=True, reason="1.50x faster, loss within noise"):
+    return {
+        "target": target,
+        "repo": "https://github.com/someone/" + target,
+        "change": "bf16 autocast",
+        "gpu": "NVIDIA A100-SXM4-40GB",
+        "recorded": recorded,
+        "baseline": [{"step_ms": 100.0}, {"step_ms": 110.0}],
+        "candidate": [{"step_ms": 60.0}, {"step_ms": 70.0}],
+        "speedup": speedup,
+        "keep": keep,
+        "reason": reason,
+    }
+
+
+def test_headline_table_uses_the_latest_run_per_repo(tmp_path, monkeypatch):
+    import json
+
+    from hotloop import scoreboard
+
+    (tmp_path / "survey").mkdir()
+    (tmp_path / "survey" / "repos.csv").write_text("repo,stars\nsomeone/ddpm,1234\n")
+    (tmp_path / "survey" / "maintainers.json").write_text(
+        '{"repos": [{"repo": "someone/vit", "stars": 99}]}'
+    )
+    (tmp_path / "headline").mkdir()
+    runs = [
+        headline_record("ddpm", "2026-10-25T01:00:00", 1.2),
+        headline_record("ddpm", "2026-10-25T02:00:00", 1.6),
+        headline_record("vit", "2026-10-25T01:00:00", 1.01, False, "1.01x is within noise"),
+    ]
+    for i, record in enumerate(runs):
+        (tmp_path / "headline" / f"{i}.json").write_text(json.dumps(record))
+    monkeypatch.setattr(scoreboard, "RESULTS", tmp_path)
+
+    rows = scoreboard.headline().splitlines()[2:]
+    assert len(rows) == 2
+    assert "1,234" in rows[0] and "A100-SXM4-40GB" in rows[0]
+    assert "| 105.0 | 65.0 | 1.60x | within noise | bf16 autocast | not sent |" in rows[0]
+    assert "| 99 |" in rows[1] and "1.01x (1.01x is within noise)" in rows[1]
+
+
+def test_runs_are_ordered_by_time_and_kept_apart_by_model(tmp_path, monkeypatch):
+    import json
+
+    from hotloop import scoreboard
+
+    folder = tmp_path / "eval" / "agent" / "ddpm"
+    folder.mkdir(parents=True)
+    for label, model, speedup in [
+        ("agent-ornith-9b-20261025-010000", "ornith-1.5:9b", 1.1),
+        ("agent-gpt-6-luna-20261025-020000", "gpt-6-luna", 1.3),
+        ("agent-gemini-flash-20261025-030000", "gemini-3.8-flash", 1.2),
+    ]:
+        record = {"target": "ddpm", "model": model, "speedup": speedup, "attempts": []}
+        (folder / f"{label}.json").write_text(json.dumps(record))
+    monkeypatch.setattr(scoreboard, "RESULTS", tmp_path)
+
+    assert scoreboard.latest("agent")["ddpm"]["speedup"] == 1.2
+    assert scoreboard.latest("agent", "gpt-6-luna")["ddpm"]["speedup"] == 1.3
+    assert scoreboard.setup_runs("agent")["ddpm"]["speedup"] == 1.1

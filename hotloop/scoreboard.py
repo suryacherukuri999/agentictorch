@@ -1,4 +1,5 @@
-"""Compare the setups over everything saved in results/eval.
+"""Compare the setups over everything saved in results/eval, and build the README's
+results table from the headline runs in results/headline.
 
 python -m hotloop.scoreboard
 
@@ -7,11 +8,17 @@ with t the step time, (t_planted - t_after) / (t_planted - t_clean), from the
 measured cost of each planted mistake in results/bench.
 """
 
+import csv
 import json
 from pathlib import Path
+from statistics import mean
+
+from hotloop.agent.models import MODELS
 
 RESULTS = Path(__file__).parent.parent / "results"
 SETUPS = ["rules", "llm", "llm-kb", "agent"]
+# The setups are compared with the local model; the agent also runs with the others.
+MAIN_MODEL = MODELS["ornith-9b"].name
 # A blind patch that runs this much slower than the original counts as harmful.
 HARM_MARGIN = 0.97
 
@@ -31,13 +38,19 @@ def recovered(speedup: float, cost: float) -> float | None:
     return (1 - 1 / speedup) / (1 - 1 / cost)
 
 
-def latest(setup: str) -> dict[str, dict]:
-    """The most recent result per target for one setup."""
+def latest(setup: str, model: str | None = None) -> dict[str, dict]:
+    """The most recent result per target for one setup, and for one model if given."""
     out = {}
-    for path in sorted((RESULTS / "eval" / setup).glob("*/*.json")):
+    # Labels end in a UTC timestamp, which orders runs across models.
+    for path in sorted((RESULTS / "eval" / setup).glob("*/*.json"), key=lambda p: p.stem[-15:]):
         record = json.loads(path.read_text())
-        out[record["target"]] = record
+        if model in (None, record["model"]):
+            out[record["target"]] = record
     return out
+
+
+def setup_runs(setup: str) -> dict[str, dict]:
+    return latest(setup, None if setup == "rules" else MAIN_MODEL)
 
 
 def harmful_attempt(attempt: dict) -> bool:
@@ -64,7 +77,7 @@ def outcome(record: dict, setup: str) -> tuple[float, bool]:
 
 
 def table() -> str:
-    results = {setup: latest(setup) for setup in SETUPS}
+    results = {setup: setup_runs(setup) for setup in SETUPS}
     targets = sorted({t for r in results.values() for t in r})
     lines = [
         "| Target | Planted cost | " + " | ".join(SETUPS) + " |",
@@ -95,7 +108,7 @@ def totals() -> str:
         "|---|---|---|---|",
     ]
     for setup in SETUPS:
-        records = latest(setup)
+        records = setup_runs(setup)
         shipped = sum(outcome(r, setup)[1] for r in records.values())
         caught = (
             sum(harmful_attempt(a) for r in records.values() for a in r["attempts"])
@@ -106,7 +119,78 @@ def totals() -> str:
     return "\n".join(lines)
 
 
+def stars() -> dict[str, int]:
+    """GitHub stars per owner/repo, as of the survey or the maintainer check."""
+    with (RESULTS / "survey" / "repos.csv").open() as f:
+        found = {row["repo"]: int(row["stars"]) for row in csv.DictReader(f)}
+    for r in json.loads((RESULTS / "survey" / "maintainers.json").read_text())["repos"]:
+        found[r["repo"]] = r["stars"]
+    return found
+
+
+def headline() -> str:
+    """One row per real repo: the original code against the agent's kept changes,
+    from the latest paired run saved for it in results/headline."""
+    records = {}
+    for path in (RESULTS / "headline").glob("*.json"):
+        record = json.loads(path.read_text())
+        latest = records.get(record["target"])
+        if latest is None or record["recorded"] > latest["recorded"]:
+            records[record["target"]] = record
+    prs_path = RESULTS / "prs.json"
+    prs = json.loads(prs_path.read_text()) if prs_path.exists() else {}
+    known = stars()
+    lines = [
+        "| Repo | Stars | GPU | Before (ms/step) | After (ms/step) | Speedup | Loss | Fixes "
+        "| Pull request |",
+        "|---" * 9 + "|",
+    ]
+    for target, r in sorted(records.items(), key=lambda item: -item[1]["speedup"]):
+        repo = r["repo"].removeprefix("https://github.com/")
+        before = mean(run["step_ms"] for run in r["baseline"])
+        after = mean(run["step_ms"] for run in r["candidate"])
+        speedup = f"{r['speedup']:.2f}x" + ("" if r["keep"] else f" ({r['reason']})")
+        # The keep rule checks the loss before the speed, so only a loss or failure
+        # reason means the loss check did not pass.
+        loss = "changed" if r["reason"].startswith(("loss", "run failed")) else "within noise"
+        cells = [
+            f"[{repo}]({r['repo']})",
+            f"{known[repo]:,}" if repo in known else "",
+            r["gpu"].removeprefix("NVIDIA "),
+            f"{before:.1f}",
+            f"{after:.1f}",
+            speedup,
+            loss,
+            r["change"],
+            prs.get(target, "not sent"),
+        ]
+        lines.append("| " + " | ".join(cells) + " |")
+    return "\n".join(lines)
+
+
+def models() -> str:
+    """The agent with each model: the speedup it kept per target, the harmful attempts
+    its keep rule caught, and what the model cost."""
+    runs = {key: latest("agent", model.name) for key, model in MODELS.items()}
+    targets = sorted({t for r in runs.values() for t in r})
+    lines = ["| Target | " + " | ".join(runs) + " |", "|---" * (len(runs) + 1) + "|"]
+    for target in targets:
+        cells = [f"{r[target]['speedup']:.2f}x" if target in r else "" for r in runs.values()]
+        lines.append(f"| {target} | " + " | ".join(cells) + " |")
+    caught = [
+        sum(harmful_attempt(a) for x in r.values() for a in x["attempts"]) for r in runs.values()
+    ]
+    cost = [sum(x["llm_cost"] for x in r.values()) for r in runs.values()]
+    lines.append("| Harmful attempts caught | " + " | ".join(map(str, caught)) + " |")
+    lines.append("| LLM cost | " + " | ".join(f"${c:.2f}" for c in cost) + " |")
+    return "\n".join(lines)
+
+
 if __name__ == "__main__":
     print(table())
     print()
     print(totals())
+    print()
+    print(models())
+    print()
+    print(headline())
