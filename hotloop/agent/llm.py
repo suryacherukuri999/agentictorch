@@ -112,7 +112,9 @@ def _post(model: Model, request: dict, attempts: int = 6) -> dict:
     for attempt in range(attempts):
         try:
             http = urllib.request.Request(url, data=data, headers=headers)
-            with urllib.request.urlopen(http, timeout=600) as response:
+            # Long, because a local model serving several agents at once can take
+            # minutes to reason through one turn.
+            with urllib.request.urlopen(http, timeout=1200) as response:
                 return json.load(response)
         except urllib.error.HTTPError as e:
             # Rate limits and overload pass; a 500 can be a request the model always
@@ -121,6 +123,12 @@ def _post(model: Model, request: dict, attempts: int = 6) -> dict:
             if not transient or attempt == attempts - 1:
                 raise RuntimeError(f"{model.name}: HTTP {e.code}: {e.read()[:500]!r}") from None
             time.sleep(min(2**attempt * 5, 120))
+        except (TimeoutError, urllib.error.URLError) as e:
+            # HTTPError is a URLError too, but is handled above. A timeout or a dropped
+            # connection gets one retry.
+            if attempt > 0:
+                raise RuntimeError(f"{model.name}: {e}") from None
+            time.sleep(5)
     raise AssertionError("unreachable")
 
 

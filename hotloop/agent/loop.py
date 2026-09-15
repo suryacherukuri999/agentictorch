@@ -70,6 +70,7 @@ class Run:
     cost: float = 0.0
     turns: int = 0
     tokens: dict[str, int] = field(default_factory=lambda: {"input": 0, "output": 0})
+    stopped: str | None = None  # why the run ended before the model finished, if it did
 
 
 def hints(session: Session) -> list[str]:
@@ -130,7 +131,14 @@ def run(
     ]
     result = Run(session, model.name, messages, None, None, toolbox.sources)
     for _ in range(max_turns):
-        reply = llm.chat(model, messages, schemas)
+        try:
+            reply = llm.chat(model, messages, schemas)
+        except (RuntimeError, OSError) as e:
+            # A timeout, an outage or the budget ends the run, but the changes
+            # already measured and kept still count.
+            result.stopped = f"the model failed: {e}"
+            log(f"stopped: {result.stopped}")
+            break
         result.turns += 1
         result.cost += reply.cost
         result.tokens["input"] += reply.input_tokens

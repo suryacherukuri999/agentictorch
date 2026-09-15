@@ -6,6 +6,8 @@ from hotloop.agent import llm
 
 PAID = llm.Model("cheap-model", "https://api.example.com/v1", "EXAMPLE_KEY", 0.5, 2.0)
 FREE = llm.Model("local", "http://localhost:11434/v1")
+# The fixture below replaces _post in every test; the retry tests need the real one.
+REAL_POST = llm._post
 BODY = {
     "choices": [{"message": {"role": "assistant", "content": "hi"}}],
     "usage": {"prompt_tokens": 1000, "completion_tokens": 500},
@@ -63,3 +65,25 @@ def test_sends_sampling_settings_for_thinking_models(isolated):
     llm.chat(FREE, [{"role": "user", "content": "hi"}], tools=[])
     assert isolated[0]["temperature"] == 0.6 and isolated[0]["reasoning_effort"] == "low"
     assert "reasoning_effort" not in isolated[1]
+
+
+def test_a_timeout_is_retried_once(monkeypatch):
+    import io
+    import urllib.request
+
+    replies = [TimeoutError("timed out"), io.BytesIO(json.dumps(BODY).encode())]
+
+    def urlopen(request, timeout):
+        reply = replies.pop(0)
+        if isinstance(reply, Exception):
+            raise reply
+        return reply
+
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(llm.time, "sleep", lambda seconds: None)
+    assert REAL_POST(FREE, {"model": "m"}) == BODY
+    assert not replies
+
+    replies[:] = [TimeoutError("timed out"), TimeoutError("timed out")]
+    with pytest.raises(RuntimeError, match="timed out"):
+        REAL_POST(FREE, {"model": "m"})

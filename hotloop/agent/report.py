@@ -36,6 +36,8 @@ def markdown(run: Run) -> str:
         f"${run.cost:.4f}",
         "",
     ]
+    if run.stopped:
+        lines += [f"Stopped early: {run.stopped}", ""]
     if s.profiles:
         lines += ["## Diagnosis", "", "```", s.profiles[0], "```", ""]
     if run.summary:
@@ -95,6 +97,7 @@ def summary(run: Run) -> dict:
         "llm_cost": run.cost,
         "turns": run.turns,
         "tokens": run.tokens,
+        "stopped": run.stopped,
     }
 
 

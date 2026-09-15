@@ -132,3 +132,20 @@ def test_quick_checks_are_capped(session, monkeypatch):
     outputs = [toolbox.call("quick_check", "{}") for _ in range(MAX_CHECKS + 1)]
     assert outputs[:-1] == ["ok"] * MAX_CHECKS
     assert outputs[-1].startswith("error: already ran")
+
+
+def test_a_model_failure_ends_the_run_but_keeps_what_was_measured(session, monkeypatch):
+    script = iter(SCRIPT[1:4])
+
+    def chat(model, messages, tools):
+        message = next(script, None)
+        if message is None:
+            raise RuntimeError("ornith: timed out")
+        return llm.Reply(message, 10, 5, 0.0, False)
+
+    monkeypatch.setattr(loop.llm, "chat", chat)
+    run = loop.run(session, llm.Model("m", "http://x"))
+
+    assert run.stopped == "the model failed: ornith: timed out"
+    assert len(session.kept) == 1
+    assert run.final is not None and run.final.verdict.keep
