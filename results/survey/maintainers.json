@@ -179,23 +179,29 @@
    ]
   },
   {
-   "repo": "sthalles/SimCLR",
-   "stars": 2495,
-   "last_outside_merge": "2021-01-28",
+   "repo": "Spijkervet/SimCLR",
+   "stars": 825,
+   "last_outside_merge": "2023-11-10",
    "outside_merges_6_months": 0,
    "outside_merges_12_months": 0,
    "latest": [
     {
-     "number": 25,
-     "merged": "2021-01-28",
-     "author": "butyuhao",
-     "title": "correct spelling mistake"
+     "number": 46,
+     "merged": "2023-11-10",
+     "author": "lxysl",
+     "title": "Fix mask issue in distributed nt_xent loss"
     },
     {
-     "number": 7,
-     "merged": "2020-04-18",
-     "author": "alessiamarcolini",
-     "title": "Fix conda requirements"
+     "number": 29,
+     "merged": "2021-03-16",
+     "author": "robbiejones96",
+     "title": "Fix TypeError in linear_evaluation.py"
+    },
+    {
+     "number": 26,
+     "merged": "2021-02-15",
+     "author": "steermomo",
+     "title": "update distributed sampler"
     }
    ]
   },
