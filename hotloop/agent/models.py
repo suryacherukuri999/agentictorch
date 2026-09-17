@@ -11,7 +11,9 @@ MODELS = {
         "ornith-1.5:9b", "http://localhost:11434/v1", temperature=0.6, reasoning_effort="low"
     ),
     # Free tier through Google's OpenAI-compatible endpoint. Checked 2026-10-24:
-    # gemini-2.5-flash is closed to new users, and free-tier calls took 9-80 s each.
+    # gemini-2.5-flash is closed to new users, free-tier calls took 9-80 s each, and
+    # the free tier allows 20 requests a day per model (from the API's quota error),
+    # too few for an agent run of 30-40 turns.
     "gemini-flash": Model(
         "gemini-3.8-flash",
         "https://generativelanguage.googleapis.com/v1beta/openai",

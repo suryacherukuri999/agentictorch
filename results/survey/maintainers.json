@@ -135,6 +135,160 @@
      "title": "fix deprecated sdpa_kernel usage"
     }
    ]
+  },
+  {
+   "repo": "w86763777/pytorch-ddpm",
+   "stars": 646,
+   "last_outside_merge": "2023-04-13",
+   "outside_merges_6_months": 0,
+   "outside_merges_12_months": 0,
+   "latest": [
+    {
+     "number": 16,
+     "merged": "2023-04-13",
+     "author": "jS5t3r",
+     "title": "Update Readme.md"
+    }
+   ]
+  },
+  {
+   "repo": "yenchenlin/nerf-pytorch",
+   "stars": 6057,
+   "last_outside_merge": "2022-07-28",
+   "outside_merges_6_months": 0,
+   "outside_merges_12_months": 0,
+   "latest": [
+    {
+     "number": 79,
+     "merged": "2022-07-28",
+     "author": "msaroufim",
+     "title": "Fix torch version to 1.11"
+    },
+    {
+     "number": 35,
+     "merged": "2021-06-21",
+     "author": "WillBrennan",
+     "title": "replace searchsorted with in-built function"
+    },
+    {
+     "number": 34,
+     "merged": "2021-04-21",
+     "author": "WillBrennan",
+     "title": "fix urls in download_example_data.sh"
+    }
+   ]
+  },
+  {
+   "repo": "sthalles/SimCLR",
+   "stars": 2495,
+   "last_outside_merge": "2021-01-28",
+   "outside_merges_6_months": 0,
+   "outside_merges_12_months": 0,
+   "latest": [
+    {
+     "number": 25,
+     "merged": "2021-01-28",
+     "author": "butyuhao",
+     "title": "correct spelling mistake"
+    },
+    {
+     "number": 7,
+     "merged": "2020-04-18",
+     "author": "alessiamarcolini",
+     "title": "Fix conda requirements"
+    }
+   ]
+  },
+  {
+   "repo": "monologg/JointBERT",
+   "stars": 749,
+   "last_outside_merge": null,
+   "outside_merges_6_months": 0,
+   "outside_merges_12_months": 0,
+   "latest": []
+  },
+  {
+   "repo": "giddyyupp/ganilla",
+   "stars": 482,
+   "last_outside_merge": null,
+   "outside_merges_6_months": 0,
+   "outside_merges_12_months": 0,
+   "latest": []
+  },
+  {
+   "repo": "eriklindernoren/PyTorch-GAN",
+   "stars": 17457,
+   "last_outside_merge": "2019-08-24",
+   "outside_merges_6_months": 0,
+   "outside_merges_12_months": 0,
+   "latest": [
+    {
+     "number": 58,
+     "merged": "2019-08-24",
+     "author": "zhampel",
+     "title": "Add simple ClusterGAN script to implementations"
+    },
+    {
+     "number": 50,
+     "merged": "2019-04-26",
+     "author": "chenyang1999",
+     "title": "updata the way about how to load pretrain model"
+    },
+    {
+     "number": 32,
+     "merged": "2019-03-31",
+     "author": "chrschorn",
+     "title": "Fix MUNIT style loss calculation"
+    }
+   ]
+  },
+  {
+   "repo": "Zeleni9/pytorch-wgan",
+   "stars": 809,
+   "last_outside_merge": "2023-12-05",
+   "outside_merges_6_months": 0,
+   "outside_merges_12_months": 0,
+   "latest": [
+    {
+     "number": 48,
+     "merged": "2023-12-05",
+     "author": "jojoclt",
+     "title": "Fix gradient penalty to calculate norm batchwise"
+    },
+    {
+     "number": 22,
+     "merged": "2021-06-07",
+     "author": "CharlesLiu7",
+     "title": "Rewrite tensorboard logger, bump pytorch, tensorflow"
+    },
+    {
+     "number": 15,
+     "merged": "2021-02-02",
+     "author": "jeremyfix",
+     "title": "Incorrect attribute name writer <-> writer"
+    }
+   ]
+  },
+  {
+   "repo": "Blealtan/efficient-kan",
+   "stars": 4660,
+   "last_outside_merge": "2024-07-03",
+   "outside_merges_6_months": 0,
+   "outside_merges_12_months": 0,
+   "latest": [
+    {
+     "number": 37,
+     "merged": "2024-07-03",
+     "author": "akaashdash",
+     "title": "Fix issue with view on previously transformed data"
+    },
+    {
+     "number": 6,
+     "merged": "2024-05-17",
+     "author": "akaashdash",
+     "title": "Allow interchangeability of KANLinear with nn.Linear"
+    }
+   ]
   }
  ]
 }

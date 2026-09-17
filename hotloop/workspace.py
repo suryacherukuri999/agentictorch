@@ -39,9 +39,20 @@ def working_copy(target: Target, label: str) -> Path:
     return dest
 
 
-def diff(repo: Path) -> str:
-    """Performance changes in a working copy, relative to its compatibility commit."""
-    return _git(repo, "diff", capture=True)
+def diff(repo: Path, target: Target) -> str:
+    """Performance changes in a working copy, committed or not, since the commit it
+    started from. The agent commits what it keeps, so a plain `git diff` misses it."""
+    return _git(repo, "diff", start(repo, target), capture=True)
+
+
+def start(repo: Path, target: Target) -> str:
+    """The commit a working copy started from: the pinned commit, or the compatibility
+    tweaks committed on top of it. A planted test script starts from its root commit."""
+    if not target.commit:
+        return _git(repo, "rev-list", "--max-parents=0", "HEAD", capture=True).split()[0]
+    if not target.compat_patch:
+        return target.commit
+    return _git(repo, "rev-list", "--reverse", f"{target.commit}..HEAD", capture=True).split()[0]
 
 
 def save_runs(target: Target, label: str, runs: list[dict]) -> Path:

@@ -189,7 +189,7 @@ def cmd_record(args) -> None:
         "speedup": verdict.speedup,
         "keep": verdict.keep,
         "reason": verdict.reason,
-        "diff": workspace.diff(working_copy(target, args.candidate)),
+        "diff": workspace.diff(working_copy(target, args.candidate), target),
     }
     path = RESULTS / args.folder / f"{target.name}-{args.candidate}.json"
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -24,6 +24,7 @@ from hotloop.tools.files import ToolError
 # optimizer steps, far too few to say anything about speed.
 CHECK_WARMUP = 2
 CHECK_STEPS = 3
+NO_CHANGE = "nothing has changed since the last kept version; make an edit with apply_edit first"
 
 
 @dataclass(frozen=True)
@@ -78,7 +79,7 @@ class Session:
     def check(self) -> str:
         """Run the working tree for a few steps to catch crashes. Uses no benchmark round."""
         if not self.diff():
-            raise ToolError("nothing has changed since the last kept version")
+            raise ToolError(NO_CHANGE)
         self._check_syntax()
         [run] = modal_runner.measure(
             self.target,
@@ -100,7 +101,7 @@ class Session:
             raise ToolError("no benchmark rounds left; call finish")
         diff = self.diff()
         if not diff:
-            raise ToolError("nothing has changed since the last kept version")
+            raise ToolError(NO_CHANGE)
         self._check_syntax()
         with self._exported("HEAD") as best:
             base, cand = modal_runner.ab(self.target, Job(best), Job(self.repo), gpu=self.gpu)
