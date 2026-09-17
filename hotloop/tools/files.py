@@ -22,10 +22,14 @@ def resolve(repo: Path, path: str) -> Path:
 
 def list_files(repo: Path, pattern: str = "**/*.py") -> list[str]:
     root = repo.resolve()
+    if Path(pattern).is_absolute() or ".." in Path(pattern).parts:
+        raise ToolError(f"{pattern} is outside the repo")
+    try:
+        found = [p for p in root.glob(pattern) if p.is_file()]
+    except (ValueError, NotImplementedError) as e:
+        raise ToolError(f"invalid pattern {pattern!r} ({e}); use a glob such as **/*.py") from None
     return sorted(
-        str(p.relative_to(root))
-        for p in root.glob(pattern)
-        if p.is_file() and ".git" not in p.relative_to(root).parts
+        str(p.relative_to(root)) for p in found if ".git" not in p.relative_to(root).parts
     )
 
 

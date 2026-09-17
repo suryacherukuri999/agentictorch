@@ -56,9 +56,8 @@ def test_headline_table_uses_the_latest_run_per_repo(tmp_path, monkeypatch):
 
     (tmp_path / "survey").mkdir()
     (tmp_path / "survey" / "repos.csv").write_text("repo,stars\nsomeone/ddpm,1234\n")
-    (tmp_path / "survey" / "maintainers.json").write_text(
-        '{"repos": [{"repo": "someone/vit", "stars": 99}]}'
-    )
+    checks = [{"repo": "someone/vit", "stars": 99, "outside_merges_12_months": 0}]
+    (tmp_path / "survey" / "maintainers.json").write_text(json.dumps({"repos": checks}))
     (tmp_path / "headline").mkdir()
     runs = [
         headline_record("ddpm", "2026-10-25T01:00:00", 1.2),
@@ -74,6 +73,7 @@ def test_headline_table_uses_the_latest_run_per_repo(tmp_path, monkeypatch):
     assert "1,234" in rows[0] and "A100-SXM4-40GB" in rows[0]
     assert "| 105.0 | 65.0 | 1.60x | within noise | bf16 autocast | not sent |" in rows[0]
     assert "| 99 |" in rows[1] and "1.01x (1.01x is within noise)" in rows[1]
+    assert rows[1].endswith("| not sent: no outside pull request merged in 12 months |")
 
 
 def test_runs_are_ordered_by_time_and_kept_apart_by_model(tmp_path, monkeypatch):

@@ -71,3 +71,10 @@ def test_apply_edit_still_refuses_lines_that_match_twice_ignoring_indent(repo):
     (repo / "two.py").write_text("if a:\n    x = 1\nif b:\n        x = 1\n")
     with pytest.raises(ToolError, match="not found"):
         apply_edit(repo, "two.py", "\tx = 1", "\tx = 2")
+
+
+def test_bad_or_escaping_patterns_are_tool_errors(repo):
+    with pytest.raises(ToolError, match="invalid pattern"):
+        list_files(repo, "**.py")
+    with pytest.raises(ToolError, match="outside the repo"):
+        list_files(repo, "../*")

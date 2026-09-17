@@ -119,12 +119,17 @@ def totals() -> str:
     return "\n".join(lines)
 
 
+def maintainers() -> dict[str, dict]:
+    """The maintainer check per owner/repo: stars and recent outside merges."""
+    record = json.loads((RESULTS / "survey" / "maintainers.json").read_text())
+    return {r["repo"]: r for r in record["repos"]}
+
+
 def stars() -> dict[str, int]:
     """GitHub stars per owner/repo, as of the survey or the maintainer check."""
     with (RESULTS / "survey" / "repos.csv").open() as f:
         found = {row["repo"]: int(row["stars"]) for row in csv.DictReader(f)}
-    for r in json.loads((RESULTS / "survey" / "maintainers.json").read_text())["repos"]:
-        found[r["repo"]] = r["stars"]
+    found.update({repo: r["stars"] for repo, r in maintainers().items()})
     return found
 
 
@@ -140,6 +145,7 @@ def headline() -> str:
     prs_path = RESULTS / "prs.json"
     prs = json.loads(prs_path.read_text()) if prs_path.exists() else {}
     known = stars()
+    checked = maintainers()
     lines = [
         "| Repo | Stars | GPU | Before (ms/step) | After (ms/step) | Speedup | Loss | Fixes "
         "| Pull request |",
@@ -162,7 +168,7 @@ def headline() -> str:
             speedup,
             loss,
             r["change"],
-            prs.get(target, "not sent"),
+            prs.get(target) or _not_sent(checked.get(repo)),
         ]
         lines.append("| " + " | ".join(cells) + " |")
     return "\n".join(lines)
@@ -184,6 +190,12 @@ def models() -> str:
     lines.append("| Harmful attempts caught | " + " | ".join(map(str, caught)) + " |")
     lines.append("| LLM cost | " + " | ".join(f"${c:.2f}" for c in cost) + " |")
     return "\n".join(lines)
+
+
+def _not_sent(check: dict | None) -> str:
+    if check and check["outside_merges_12_months"] == 0:
+        return "not sent: no outside pull request merged in 12 months"
+    return "not sent"
 
 
 if __name__ == "__main__":
