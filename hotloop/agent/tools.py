@@ -143,10 +143,12 @@ class Toolbox:
     def _quick_check(self) -> str:
         if self.checks >= MAX_CHECKS:
             raise ToolError(f"already ran {MAX_CHECKS} quick checks in this run")
+        self.session.check_precision()
         self.checks += 1
         return self.session.check()
 
     def _run_benchmark(self, description: str) -> str:
+        self.session.check_precision()
         attempt = self.session.benchmark(description)
         v = attempt.verdict
         outcome = "kept" if v.keep else "reverted"

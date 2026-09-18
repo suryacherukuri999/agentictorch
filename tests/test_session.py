@@ -109,3 +109,29 @@ def test_quick_check_uses_no_round_and_returns_the_log_on_a_crash(session, monke
     assert 'File "train.py", line 1' in text
     assert session.rounds_left == session.rounds
     assert calls == [session.repo]  # the working tree itself, edits included
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "with torch.autocast(device_type='cuda', dtype=torch.float16):",
+        "with torch.autocast('cuda'):",
+        "model = model.half()",
+    ],
+)
+def test_float16_without_a_grad_scaler_is_refused(session, line):
+    (session.repo / "train.py").write_text(f"speed = 'SLOW'\n{line}\n")
+    with pytest.raises(ToolError, match="GradScaler"):
+        session.check_precision()
+
+
+def test_bfloat16_or_float16_with_a_grad_scaler_is_allowed(session):
+    (session.repo / "train.py").write_text(
+        "speed = 'SLOW'\nwith torch.autocast(device_type='cuda', dtype=torch.bfloat16):\n"
+    )
+    session.check_precision()
+    (session.repo / "train.py").write_text(
+        "speed = 'SLOW'\nscaler = torch.amp.GradScaler()\n"
+        "with torch.autocast(device_type='cuda', dtype=torch.float16):\n"
+    )
+    session.check_precision()

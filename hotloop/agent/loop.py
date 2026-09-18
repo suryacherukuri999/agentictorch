@@ -26,6 +26,7 @@ How to work:
 - Don't change the model, the data, the batch size, the learning rate, the number of steps,
   or what gets printed or saved. Only make the same training run faster.
 - Don't add command-line flags; make the change directly in the code.
+- For mixed precision, use bfloat16. float16 is refused unless the code also uses a GradScaler.
 - Call finish when no promising change is left."""
 
 BLIND = """You make PyTorch training code faster without changing what it computes.
@@ -37,6 +38,7 @@ How to work:
 - Don't change the model, the data, the batch size, the learning rate, the number of steps,
   or what gets printed or saved. Only make the same training run faster.
 - Don't add command-line flags; make the change directly in the code.
+- For mixed precision, use bfloat16. float16 needs a GradScaler.
 - Call finish when you are done editing."""
 
 NUDGE = "Use a tool. Call finish when no promising change is left."

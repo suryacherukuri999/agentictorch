@@ -6,6 +6,7 @@ the keep/revert rule, not the model, decides what happens to the change.
 """
 
 import contextlib
+import re
 import shutil
 import subprocess
 import tempfile
@@ -25,6 +26,10 @@ from hotloop.tools.files import ToolError
 CHECK_WARMUP = 2
 CHECK_STEPS = 3
 NO_CHANGE = "nothing has changed since the last kept version; make an edit with apply_edit first"
+# Float16 has a narrow exponent range: without loss scaling, small gradients underflow
+# to zero over a long run, which a few dozen measured steps can't show. CUDA autocast
+# without a dtype means float16.
+FLOAT16 = re.compile(r"(?<!b)float16|torch\.half\b|\.half\(\)")
 
 
 @dataclass(frozen=True)
@@ -130,6 +135,22 @@ class Session:
         diff = self._git("diff", self.original, "HEAD")
         return Attempt("all kept changes", diff, decide(base, cand), base, cand)
 
+    def check_precision(self) -> None:
+        """Refuse a change that adds float16 when the repo has no GradScaler."""
+        added = [
+            line for line in self.diff().splitlines()
+            if line.startswith("+") and not line.startswith("+++")
+        ]  # fmt: skip
+        if not any(_uses_float16(line) for line in added):
+            return
+        grep = ["git", "-C", str(self.repo), "grep", "--quiet", "--untracked", "GradScaler"]
+        if subprocess.run(grep).returncode != 0:
+            raise ToolError(
+                "float16 needs a GradScaler: without loss scaling, small gradients underflow to "
+                "zero over a long run, which a short benchmark can't show. Use bfloat16, or add "
+                "torch.amp.GradScaler around backward and the optimizer step."
+            )
+
     def _check_syntax(self) -> None:
         """Catch Python syntax errors locally instead of spending a GPU round on them."""
         for path in self._git("diff", "--name-only").split():
@@ -153,3 +174,9 @@ class Session:
             ["git", "-C", str(self.repo), *args], check=True, capture_output=True, text=True
         )
         return out.stdout
+
+
+def _uses_float16(line: str) -> bool:
+    if FLOAT16.search(line):
+        return True
+    return "autocast(" in line and "bfloat16" not in line and "bf16" not in line
