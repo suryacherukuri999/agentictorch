@@ -9,6 +9,10 @@ from hotloop.tools.files import ToolError
 MAX_PROFILES = 2
 MAX_CHECKS = 5
 DOC_CHARS = 700
+# Tools that run on Modal, where a call can fail for reasons outside the code (a lost
+# container, a remote exception); such a failure shouldn't end a run that has already
+# measured and kept changes.
+GPU_TOOLS = {"profile", "quick_check", "run_benchmark"}
 
 
 def _schema(name: str, description: str, properties: dict, required: list[str]) -> dict:
@@ -109,6 +113,10 @@ class Toolbox:
             return f"error: {e}"
         except (AttributeError, TypeError, json.JSONDecodeError) as e:
             return f"error: bad call to {name}: {e}"
+        except Exception as e:
+            if name not in GPU_TOOLS:
+                raise
+            return f"error: {name} failed: {type(e).__name__}: {e}"
 
     def _list_files(self, pattern: str = "**/*.py") -> str:
         return "\n".join(files.list_files(self.session.repo, pattern)[:200]) or "no files"

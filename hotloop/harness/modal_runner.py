@@ -16,7 +16,7 @@ import subprocess
 import tarfile
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import modal
@@ -27,6 +27,9 @@ from hotloop.targets import Target
 
 # These runs need a few GB of GPU memory; bigger GPUs only spend the credits faster.
 GPUS = ("T4", "L4", "A100-40GB")
+# An A100-40GB request has run on 40GB, 80GB and PCIe cards, billed as A100-40GB.
+# A pair split over two containers could land on two GPU models, so it runs in one.
+MIXED_POOLS = {"A100-40GB"}
 CPU_CORES = 8.0
 MEMORY_GIB = 16
 # Image pull, container start and data staging, on top of the run's own timeout.
@@ -58,6 +61,7 @@ class Job:
 
     repo_dir: Path
     extra_args: str = ""
+    seed: int | None = None  # overrides the container's seed for this job
 
 
 def measure(
@@ -98,11 +102,21 @@ def ab(
 ) -> tuple[list[dict], list[dict]]:
     """Run baseline and candidate in the same container, one container per seed.
 
-    The order alternates between containers, so neither configuration always
-    runs second on a GPU the other has just warmed up.
+    The order alternates between seeds, so neither configuration always runs
+    second on a GPU the other has just warmed up. On a GPU type whose requests
+    Modal serves with more than one model, every run goes in one container.
     """
     orders = [[base, cand] if i % 2 == 0 else [cand, base] for i in range(len(seeds))]
-    results = _run(target, orders, seeds, gpu=gpu, verbose=verbose)
+    if gpu in MIXED_POOLS:
+        jobs = [
+            replace(job, seed=seed)
+            for order, seed in zip(orders, seeds, strict=True)
+            for job in order
+        ]
+        [runs] = _run(target, [jobs], seeds[:1], gpu=gpu, verbose=verbose)
+        results = [runs[i : i + 2] for i in range(0, len(runs), 2)]
+    else:
+        results = _run(target, orders, seeds, gpu=gpu, verbose=verbose)
     base_runs, cand_runs = [], []
     for i, (first, second) in enumerate(results):
         base_runs.append(first if i % 2 == 0 else second)
@@ -139,6 +153,7 @@ def _run(
                 {
                     "payload": payloads[job.repo_dir],
                     "command": f"{target.command} {job.extra_args}".strip(),
+                    "seed": job.seed,
                 }
                 for job in jobs
             ]
@@ -288,7 +303,9 @@ def _measure_in_container(
             repo,
             steps=steps,
             warmup=warmup,
-            seed=seed,
+            # Containers load this file from the working tree, so a caller started
+            # before jobs carried seeds may send none.
+            seed=seed if job.get("seed") is None else job["seed"],
             timeout=timeout,
             env=env,
             profile=profile,

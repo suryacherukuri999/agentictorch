@@ -134,6 +134,16 @@ def test_quick_checks_are_capped(session, monkeypatch):
     assert outputs[-1].startswith("error: already ran")
 
 
+def test_a_failed_gpu_call_is_an_error_for_the_model_not_a_crash(session, monkeypatch):
+    def lost(self, description):
+        raise KeyError("seed")
+
+    monkeypatch.setattr(session_module.Session, "benchmark", lost)
+    apply_edit(session.repo, "train.py", "SLOW", "FAST")
+    output = Toolbox(session).call("run_benchmark", '{"description": "x"}')
+    assert output == "error: run_benchmark failed: KeyError: 'seed'"
+
+
 def test_a_model_failure_ends_the_run_but_keeps_what_was_measured(session, monkeypatch):
     script = iter(SCRIPT[1:4])
 
