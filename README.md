@@ -133,6 +133,15 @@ motivated the project (`results/survey/`).
 - **The profiler's `with_stack=True`** for line numbers. On PyTorch 2.14 it named
   frames by their function's `def` line, which is worse than no line for an agent
   deciding where to edit.
+- **Trusting the data-wait share.** On x-transformers, 61% of each step showed as
+  waiting on the DataLoader. The dataset copied each sample to the GPU, which made
+  the CPU wait for the GPU inside the loader. Copying whole batches instead cut the
+  wait to 0% and left the step time unchanged (1.01x). The profile's GPU-busy
+  share (88%) was the real signal.
+- **Trusting the loss check with float16.** The agent kept float16 autocast without
+  a GradScaler on two repos. The loss matched over the measured steps, but without
+  loss scaling small gradients can underflow over a long run. The agent now refuses
+  float16 unless the repo uses a GradScaler.
 
 ## Credits
 
