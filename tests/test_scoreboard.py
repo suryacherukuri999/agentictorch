@@ -87,7 +87,7 @@ def test_headline_table_lists_repos_where_the_agent_kept_nothing(tmp_path, monke
     (tmp_path / "headline").mkdir()
     folder = tmp_path / "eval" / "agent" / "ganilla"
     folder.mkdir(parents=True)
-    run = {"target": "ganilla", "model": scoreboard.HEADLINE_MODEL, "gpu": "NVIDIA L4",
+    run = {"target": "ganilla", "model": scoreboard.MAIN_MODEL, "gpu": "NVIDIA L4",
            "baseline_ms": 130.5, "kept": [], "speedup": 1.0, "attempts": []}  # fmt: skip
     (folder / "agent-gpt-6-luna-20261025-045305.json").write_text(json.dumps(run))
     monkeypatch.setattr(scoreboard, "RESULTS", tmp_path)
@@ -115,4 +115,30 @@ def test_runs_are_ordered_by_time_and_kept_apart_by_model(tmp_path, monkeypatch)
 
     assert scoreboard.latest("agent")["ddpm"]["speedup"] == 1.2
     assert scoreboard.latest("agent", "gpt-6-luna")["ddpm"]["speedup"] == 1.3
-    assert scoreboard.setup_runs("agent")["ddpm"]["speedup"] == 1.1
+    assert scoreboard.setup_runs("agent")["ddpm"]["speedup"] == 1.3
+    assert scoreboard.setup_runs("agent", scoreboard.LOCAL_MODEL)["ddpm"]["speedup"] == 1.1
+
+
+def test_versus_compares_the_agent_with_the_fastest_hand_fix(tmp_path, monkeypatch):
+    import json
+
+    from hotloop import scoreboard
+
+    l4 = "NVIDIA L4"
+    (tmp_path / "headline").mkdir()
+    (tmp_path / "go-no-go").mkdir()
+    (tmp_path / "hand").mkdir()
+    fixes = {"go-no-go/ddpm-amp": 1.27, "hand/ddpm-hand": 2.28}
+    for name, speedup in fixes.items():
+        record = {"target": "ddpm", "gpu": l4, "speedup": speedup, "change": name,
+                  "baseline": [{"step_ms": 540.0}, {"step_ms": 560.0}]}  # fmt: skip
+        (tmp_path / f"{name}.json").write_text(json.dumps(record))
+    folder = tmp_path / "eval" / "agent" / "ddpm"
+    folder.mkdir(parents=True)
+    run = {"target": "ddpm", "model": scoreboard.MAIN_MODEL, "gpu": l4, "speedup": 1.29,
+           "kept": ["bf16"], "attempts": []}  # fmt: skip
+    (folder / "agent-gpt-6-luna-20261025-034818.json").write_text(json.dumps(run))
+    monkeypatch.setattr(scoreboard, "RESULTS", tmp_path)
+
+    [row] = scoreboard.versus().splitlines()[2:]
+    assert row == "| ddpm | L4 | 550.0 | 1.29x | 1 changes | 2.28x | hand/ddpm-hand |"

@@ -18,10 +18,10 @@ from hotloop.agent.models import MODELS
 
 RESULTS = Path(__file__).parent.parent / "results"
 SETUPS = ["rules", "llm", "llm-kb", "agent"]
-# The setups are compared with the local model; the agent also runs with the others.
-MAIN_MODEL = MODELS["ornith-9b"].name
-# The model behind the headline runs on real repos.
-HEADLINE_MODEL = MODELS["gpt-6-luna"].name
+# The setups are compared, and the headline runs made, with gpt-6-luna. The planted suite
+# ran with the local model, which turned out too slow for the real repos.
+MAIN_MODEL = MODELS["gpt-6-luna"].name
+LOCAL_MODEL = MODELS["ornith-9b"].name
 # A blind patch that runs this much slower than the original counts as harmful.
 HARM_MARGIN = 0.97
 
@@ -52,8 +52,15 @@ def latest(setup: str, model: str | None = None) -> dict[str, dict]:
     return out
 
 
-def setup_runs(setup: str) -> dict[str, dict]:
-    return latest(setup, None if setup == "rules" else MAIN_MODEL)
+def setup_runs(setup: str, model: str = MAIN_MODEL) -> dict[str, dict]:
+    return latest(setup, None if setup == "rules" else model)
+
+
+def compared(model: str) -> dict[str, dict[str, dict]]:
+    """Each setup's runs, limited to the targets every setup ran with this model."""
+    runs = {setup: setup_runs(setup, model) for setup in SETUPS}
+    common = set.intersection(*(set(r) for r in runs.values()))
+    return {setup: {t: r[t] for t in r if t in common} for setup, r in runs.items()}
 
 
 def harmful_attempt(attempt: dict) -> bool:
@@ -79,9 +86,10 @@ def outcome(record: dict, setup: str) -> tuple[float, bool]:
     return speedup, speedup < HARM_MARGIN
 
 
-def table() -> str:
-    results = {setup: setup_runs(setup) for setup in SETUPS}
-    targets = sorted({t for r in results.values() for t in r})
+def table(model: str = MAIN_MODEL) -> str:
+    results = {setup: setup_runs(setup, model) for setup in SETUPS}
+    # Rows for the targets this model ran; rules results fill in where they exist.
+    targets = sorted({t for setup, r in results.items() if setup != "rules" for t in r})
     lines = [
         "| Target | Planted cost | " + " | ".join(SETUPS) + " |",
         "|---" * (len(SETUPS) + 2) + "|",
@@ -103,15 +111,14 @@ def table() -> str:
     return "\n".join(lines)
 
 
-def totals() -> str:
-    """Per setup: targets run, harmful changes shipped and, for the agent, the harmful
-    attempts its keep rule caught and reverted."""
+def totals(model: str = MAIN_MODEL) -> str:
+    """Per setup, over the targets every setup ran: harmful changes shipped and, for the
+    agent, the harmful attempts its keep rule caught and reverted."""
     lines = [
         "| Setup | Targets | Harmful changes shipped | Harmful attempts caught |",
         "|---|---|---|---|",
     ]
-    for setup in SETUPS:
-        records = setup_runs(setup)
+    for setup, records in compared(model).items():
         shipped = sum(outcome(r, setup)[1] for r in records.values())
         caught = (
             sum(harmful_attempt(a) for r in records.values() for a in r["attempts"])
@@ -136,15 +143,61 @@ def stars() -> dict[str, int]:
     return found
 
 
-def headline() -> str:
-    """One row per real repo: the original code against the agent's kept changes,
-    from the latest paired run saved for it in results/headline."""
+def headline_records() -> dict[str, dict]:
+    """The latest paired run per repo in results/headline."""
     records = {}
     for path in (RESULTS / "headline").glob("*.json"):
         record = json.loads(path.read_text())
         previous = records.get(record["target"])
         if previous is None or record["recorded"] > previous["recorded"]:
             records[record["target"]] = record
+    return records
+
+
+def hand_fixes() -> dict[str, dict]:
+    """The fastest measured hand fix per repo, from results/hand and the go/no-go check."""
+    best = {}
+    for path in [*(RESULTS / "hand").glob("*.json"), *(RESULTS / "go-no-go").glob("*.json")]:
+        record = json.loads(path.read_text())
+        previous = best.get(record["target"])
+        if previous is None or (record["speedup"] or 0) > (previous["speedup"] or 0):
+            best[record["target"]] = record
+    return best
+
+
+def versus() -> str:
+    """Per real repo: the agent's kept changes and the fastest hand fix, each measured
+    in pairs against the original code on the same kind of GPU."""
+    hands = hand_fixes()
+    agents = latest("agent", MAIN_MODEL)
+    labels = {t: r["change"] for t, r in headline_records().items()}
+    lines = [
+        "| Repo | GPU | Original (ms/step) | Agent | Agent's changes | Hand fix "
+        "| Hand fix's changes |",
+        "|---" * 7 + "|",
+    ]
+    for target in sorted(set(agents) & set(hands), key=lambda t: -hands[t]["speedup"]):
+        agent, hand = agents[target], hands[target]
+        if agent["gpu"] != hand["gpu"]:
+            continue
+        changes = labels.get(target, f"{len(agent['kept'])} changes") if agent["kept"] else ""
+        cells = [
+            target,
+            hand["gpu"].removeprefix("NVIDIA "),
+            f"{mean(run['step_ms'] for run in hand['baseline']):.1f}",
+            f"{agent['speedup']:.2f}x" if agent["kept"] else "nothing kept",
+            changes,
+            f"{hand['speedup']:.2f}x",
+            hand["change"],
+        ]
+        lines.append("| " + " | ".join(cells) + " |")
+    return "\n".join(lines)
+
+
+def headline() -> str:
+    """One row per real repo: the original code against the agent's kept changes,
+    from the latest paired run saved for it in results/headline."""
+    records = headline_records()
     prs_path = RESULTS / "prs.json"
     prs = json.loads(prs_path.read_text()) if prs_path.exists() else {}
     known = stars()
@@ -175,7 +228,7 @@ def headline() -> str:
         ]
         lines.append("| " + " | ".join(cells) + " |")
     # Repos where the agent kept nothing have no headline run, but they belong in the table.
-    for target, run in sorted(latest("agent", HEADLINE_MODEL).items()):
+    for target, run in sorted(latest("agent", MAIN_MODEL).items()):
         if target in records or target.startswith("bench-") or run["kept"]:
             continue
         url = targets.load(target).repo
@@ -199,6 +252,7 @@ def models() -> str:
     """The agent with each model: the speedup it kept per target, the harmful attempts
     its keep rule caught, and what the model cost."""
     runs = {key: latest("agent", model.name) for key, model in MODELS.items()}
+    runs = {key: r for key, r in runs.items() if r}
     targets = sorted({t for r in runs.values() for t in r})
     lines = ["| Target | " + " | ".join(runs) + " |", "|---" * (len(runs) + 1) + "|"]
     for target in targets:
@@ -220,10 +274,14 @@ def _not_sent(check: dict | None) -> str:
 
 
 if __name__ == "__main__":
-    print(table())
-    print()
-    print(totals())
-    print()
+    for title, model in (("gpt-6-luna", MAIN_MODEL), ("the local model", LOCAL_MODEL)):
+        print(f"Setups with {title}\n")
+        print(table(model))
+        print()
+        print(totals(model))
+        print()
     print(models())
     print()
     print(headline())
+    print()
+    print(versus())
