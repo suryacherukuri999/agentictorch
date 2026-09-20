@@ -13,12 +13,15 @@ import json
 from pathlib import Path
 from statistics import mean
 
+from hotloop import targets
 from hotloop.agent.models import MODELS
 
 RESULTS = Path(__file__).parent.parent / "results"
 SETUPS = ["rules", "llm", "llm-kb", "agent"]
 # The setups are compared with the local model; the agent also runs with the others.
 MAIN_MODEL = MODELS["ornith-9b"].name
+# The model behind the headline runs on real repos.
+HEADLINE_MODEL = MODELS["gpt-6-luna"].name
 # A blind patch that runs this much slower than the original counts as harmful.
 HARM_MARGIN = 0.97
 
@@ -139,8 +142,8 @@ def headline() -> str:
     records = {}
     for path in (RESULTS / "headline").glob("*.json"):
         record = json.loads(path.read_text())
-        latest = records.get(record["target"])
-        if latest is None or record["recorded"] > latest["recorded"]:
+        previous = records.get(record["target"])
+        if previous is None or record["recorded"] > previous["recorded"]:
             records[record["target"]] = record
     prs_path = RESULTS / "prs.json"
     prs = json.loads(prs_path.read_text()) if prs_path.exists() else {}
@@ -168,6 +171,24 @@ def headline() -> str:
             speedup,
             loss,
             r["change"],
+            prs.get(target) or _not_sent(checked.get(repo)),
+        ]
+        lines.append("| " + " | ".join(cells) + " |")
+    # Repos where the agent kept nothing have no headline run, but they belong in the table.
+    for target, run in sorted(latest("agent", HEADLINE_MODEL).items()):
+        if target in records or target.startswith("bench-") or run["kept"]:
+            continue
+        url = targets.load(target).repo
+        repo = url.removeprefix("https://github.com/")
+        cells = [
+            f"[{repo}]({url})",
+            f"{known[repo]:,}" if repo in known else "",
+            run["gpu"].removeprefix("NVIDIA "),
+            f"{run['baseline_ms']:.1f}",
+            "",
+            "nothing kept",
+            "",
+            "",
             prs.get(target) or _not_sent(checked.get(repo)),
         ]
         lines.append("| " + " | ".join(cells) + " |")

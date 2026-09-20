@@ -76,6 +76,27 @@ def test_headline_table_uses_the_latest_run_per_repo(tmp_path, monkeypatch):
     assert rows[1].endswith("| not sent: no outside pull request merged in 12 months |")
 
 
+def test_headline_table_lists_repos_where_the_agent_kept_nothing(tmp_path, monkeypatch):
+    import json
+
+    from hotloop import scoreboard
+
+    (tmp_path / "survey").mkdir()
+    (tmp_path / "survey" / "repos.csv").write_text("repo,stars\n")
+    (tmp_path / "survey" / "maintainers.json").write_text('{"repos": []}')
+    (tmp_path / "headline").mkdir()
+    folder = tmp_path / "eval" / "agent" / "ganilla"
+    folder.mkdir(parents=True)
+    run = {"target": "ganilla", "model": scoreboard.HEADLINE_MODEL, "gpu": "NVIDIA L4",
+           "baseline_ms": 130.5, "kept": [], "speedup": 1.0, "attempts": []}  # fmt: skip
+    (folder / "agent-gpt-6-luna-20261025-045305.json").write_text(json.dumps(run))
+    monkeypatch.setattr(scoreboard, "RESULTS", tmp_path)
+
+    [row] = scoreboard.headline().splitlines()[2:]
+    assert row.startswith("| [giddyyupp/ganilla](https://github.com/giddyyupp/ganilla) |")
+    assert "| L4 | 130.5 |  | nothing kept |" in row
+
+
 def test_runs_are_ordered_by_time_and_kept_apart_by_model(tmp_path, monkeypatch):
     import json
 
