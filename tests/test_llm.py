@@ -87,3 +87,35 @@ def test_a_timeout_is_retried_once(monkeypatch):
     replies[:] = [TimeoutError("timed out"), TimeoutError("timed out")]
     with pytest.raises(RuntimeError, match="timed out"):
         REAL_POST(FREE, {"model": "m"})
+
+
+def test_responses_models_send_items_and_get_chat_shaped_replies(monkeypatch):
+    sent = []
+    output = [
+        {"type": "reasoning", "id": "rs_1", "summary": []},
+        {"type": "function_call", "call_id": "call_1", "name": "read_file",
+         "arguments": '{"path": "train.py"}'},
+    ]  # fmt: skip
+    reply = {"output": output, "usage": {"input_tokens": 100, "output_tokens": 20}}
+    monkeypatch.setattr(llm, "_post", lambda model, request: sent.append(request) or reply)
+    model = llm.Model("sol", "https://api.example.com/v1", "EXAMPLE_KEY", 2.0, 10.0,
+                      reasoning_effort="medium", api="responses")  # fmt: skip
+    tool = {"type": "function", "function": {"name": "read_file", "parameters": {}}}
+    messages = [{"role": "system", "content": "be fast"}, {"role": "user", "content": "go"}]
+
+    first = llm.chat(model, messages, [tool])
+    assert sent[0]["input"] == [
+        {"role": "developer", "content": "be fast"},
+        {"role": "user", "content": "go"},
+    ]
+    assert sent[0]["tools"] == [{"type": "function", "name": "read_file", "parameters": {}}]
+    assert sent[0]["reasoning"] == {"effort": "medium"}
+    assert first.message["tool_calls"][0]["id"] == "call_1"
+    assert first.cost == pytest.approx((100 * 2.0 + 20 * 10.0) / 1e6)
+
+    messages += [first.message, {"role": "tool", "tool_call_id": "call_1", "content": "x = 1"}]
+    llm.chat(model, messages, [tool])
+    assert sent[1]["input"][2:] == [
+        *output,
+        {"type": "function_call_output", "call_id": "call_1", "output": "x = 1"},
+    ]

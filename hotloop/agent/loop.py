@@ -145,7 +145,9 @@ def run(
         result.cost += reply.cost
         result.tokens["input"] += reply.input_tokens
         result.tokens["output"] += reply.output_tokens
-        message = {k: v for k, v in reply.message.items() if k in ("role", "content", "tool_calls")}
+        # "items" holds a Responses API turn's raw output, which goes back in the next request.
+        keep = ("role", "content", "tool_calls", "items")
+        message = {k: v for k, v in reply.message.items() if k in keep}
         messages.append(message)
         calls = message.get("tool_calls") or []
         if not calls:

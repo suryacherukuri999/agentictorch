@@ -32,4 +32,16 @@ MODELS = {
         reasoning_effort="none",
         max_tokens_field="max_completion_tokens",
     ),
+    # Paid and stronger, to check whether a better model changes the outcome. Checked on
+    # developers.openai.com 2026-10-25: $2.00 per million input tokens and $10.00 per
+    # million output tokens; it takes tools with reasoning only through the Responses API.
+    "gpt-6.1-sol": Model(
+        "gpt-6.1-sol",
+        "https://api.openai.com/v1",
+        key_env="OPENAI_API_KEY",
+        usd_per_m_input=2.00,
+        usd_per_m_output=10.00,
+        reasoning_effort="medium",
+        api="responses",
+    ),
 }

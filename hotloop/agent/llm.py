@@ -38,6 +38,7 @@ class Model:
     temperature: float = 0.0
     reasoning_effort: str | None = None  # for thinking models; omitted when None
     max_tokens_field: str = "max_tokens"  # newer OpenAI models want max_completion_tokens
+    api: str = "chat"  # "responses" for models that take tools only through /v1/responses
 
     @property
     def paid(self) -> bool:
@@ -54,15 +55,18 @@ class Reply:
 
 
 def chat(model: Model, messages: list[dict], tools: list[dict], max_tokens: int = 4096) -> Reply:
-    request = {
-        "model": model.name,
-        "messages": messages,
-        "tools": tools,
-        model.max_tokens_field: max_tokens,
-        "temperature": model.temperature,
-    }
-    if model.reasoning_effort:
-        request["reasoning_effort"] = model.reasoning_effort
+    if model.api == "responses":
+        request = _responses_request(model, messages, tools, max_tokens)
+    else:
+        request = {
+            "model": model.name,
+            "messages": messages,
+            "tools": tools,
+            model.max_tokens_field: max_tokens,
+            "temperature": model.temperature,
+        }
+        if model.reasoning_effort:
+            request["reasoning_effort"] = model.reasoning_effort
     key = hashlib.sha256(json.dumps([model.base_url, request], sort_keys=True).encode())
     cached = CACHE / f"{key.hexdigest()}.json"
     if cached.exists():
@@ -75,6 +79,8 @@ def chat(model: Model, messages: list[dict], tools: list[dict], max_tokens: int 
         if spent + worst > PAID_BUDGET:
             raise BudgetExceeded(f"paid model spend is ${spent:.2f}; stopping at ${PAID_BUDGET}")
     body = _post(model, request)
+    if model.api == "responses":
+        body = _as_chat(body)
     CACHE.mkdir(parents=True, exist_ok=True)
     cached.write_text(json.dumps(body))
     reply = _reply(model, body, cached=False)
@@ -108,7 +114,8 @@ def _post(model: Model, request: dict, attempts: int = 6) -> dict:
             raise RuntimeError(f"{model.key_env} is not set in the environment or {KEYS}")
         headers["Authorization"] = f"Bearer {key}"
     data = json.dumps(request).encode()
-    url = model.base_url.rstrip("/") + "/chat/completions"
+    path = "/responses" if model.api == "responses" else "/chat/completions"
+    url = model.base_url.rstrip("/") + path
     for attempt in range(attempts):
         try:
             http = urllib.request.Request(url, data=data, headers=headers)
@@ -130,6 +137,67 @@ def _post(model: Model, request: dict, attempts: int = 6) -> dict:
                 raise RuntimeError(f"{model.name}: {e}") from None
             time.sleep(5)
     raise AssertionError("unreachable")
+
+
+def _responses_request(model: Model, messages: list[dict], tools: list[dict], max_tokens: int):
+    """The same conversation as a Responses API request. An assistant turn that came from
+    this API goes back as its raw output items: reasoning models need their reasoning
+    items returned with the tool calls."""
+    items = []
+    for m in messages:
+        if m["role"] == "tool":
+            items.append(
+                {
+                    "type": "function_call_output",
+                    "call_id": m["tool_call_id"],
+                    "output": m["content"],
+                }
+            )
+        elif m.get("items"):
+            items.extend(m["items"])
+        else:
+            role = "developer" if m["role"] == "system" else m["role"]
+            items.append({"role": role, "content": m.get("content") or ""})
+    request = {
+        "model": model.name,
+        "input": items,
+        "tools": [{"type": "function", **t["function"]} for t in tools],
+        "max_output_tokens": max_tokens,
+    }
+    if model.reasoning_effort:
+        request["reasoning"] = {"effort": model.reasoning_effort}
+    return request
+
+
+def _as_chat(body: dict) -> dict:
+    """A Responses API reply in the shape of a chat completion, keeping the raw output items."""
+    output = body.get("output") or []
+    text = "".join(
+        part.get("text", "")
+        for item in output
+        if item.get("type") == "message"
+        for part in item.get("content") or []
+    )
+    calls = [
+        {
+            "id": item["call_id"],
+            "type": "function",
+            "function": {"name": item["name"], "arguments": item["arguments"]},
+        }
+        for item in output
+        if item.get("type") == "function_call"
+    ]
+    message = {"role": "assistant", "content": text or None, "items": output}
+    if calls:
+        message["tool_calls"] = calls
+    usage = body.get("usage") or {}
+    return {
+        "choices": [{"message": message}],
+        "usage": {
+            "prompt_tokens": usage.get("input_tokens", 0),
+            "completion_tokens": usage.get("output_tokens", 0),
+        },
+    }
 
 
 def _reply(model: Model, body: dict, cached: bool) -> Reply:
