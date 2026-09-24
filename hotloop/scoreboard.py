@@ -11,7 +11,7 @@ measured cost of each planted mistake in results/bench.
 import csv
 import json
 from pathlib import Path
-from statistics import mean
+from statistics import geometric_mean, mean
 
 from hotloop import targets
 from hotloop.agent.models import MODELS
@@ -87,16 +87,15 @@ def outcome(record: dict, setup: str) -> tuple[float, bool]:
 
 
 def table(model: str = MAIN_MODEL) -> str:
-    results = {setup: setup_runs(setup, model) for setup in SETUPS}
-    # Rows for the targets this model ran; rules results fill in where they exist.
-    targets = sorted({t for setup, r in results.items() if setup != "rules" for t in r})
-    lines = [
-        "| Target | Planted cost | " + " | ".join(SETUPS) + " |",
-        "|---" * (len(SETUPS) + 2) + "|",
-    ]
+    results = compared(model)
+    targets = sorted(results["agent"])
+    # Only planted cases have a known cost; real repos leave the column out.
+    planted = any(planted_cost(t) for t in targets)
+    columns = ["Target", *(["Planted cost"] if planted else []), *SETUPS]
+    lines = ["| " + " | ".join(columns) + " |", "|---" * len(columns) + "|"]
     for target in targets:
         cost = planted_cost(target)
-        cells = []
+        cells = [f"{cost:.2f}x" if cost else ""] if planted else []
         for setup in SETUPS:
             record = results[setup].get(target)
             if record is None:
@@ -106,26 +105,29 @@ def table(model: str = MAIN_MODEL) -> str:
             share = recovered(speedup, cost) if cost else None
             cell = f"{speedup:.2f}x" + (f" ({share:.0%})" if share is not None else "")
             cells.append(cell + (" harmful" if harmful else ""))
-        planted = f"{cost:.2f}x" if cost else ""
-        lines.append(f"| {target} | {planted} | " + " | ".join(cells) + " |")
+        lines.append(f"| {target} | " + " | ".join(cells) + " |")
     return "\n".join(lines)
 
 
 def totals(model: str = MAIN_MODEL) -> str:
-    """Per setup, over the targets every setup ran: harmful changes shipped and, for the
-    agent, the harmful attempts its keep rule caught and reverted."""
+    """Per setup, over the targets every setup ran: the typical speedup that ships (a patch
+    that crashes counts as 1.00x), harmful changes shipped and, for the agent, the harmful
+    attempts its keep rule caught and reverted."""
     lines = [
-        "| Setup | Targets | Harmful changes shipped | Harmful attempts caught |",
-        "|---|---|---|---|",
+        "| Setup | Targets | Speedup (geometric mean) | Harmful changes shipped "
+        "| Harmful attempts caught |",
+        "|---|---|---|---|---|",
     ]
     for setup, records in compared(model).items():
-        shipped = sum(outcome(r, setup)[1] for r in records.values())
+        outcomes = [outcome(r, setup) for r in records.values()]
+        typical = f"{geometric_mean(s for s, _ in outcomes):.2f}x" if outcomes else ""
+        shipped = sum(harmful for _, harmful in outcomes)
         caught = (
             sum(harmful_attempt(a) for r in records.values() for a in r["attempts"])
             if setup == "agent"
             else ""
         )
-        lines.append(f"| {setup} | {len(records)} | {shipped} | {caught} |")
+        lines.append(f"| {setup} | {len(records)} | {typical} | {shipped} | {caught} |")
     return "\n".join(lines)
 
 
