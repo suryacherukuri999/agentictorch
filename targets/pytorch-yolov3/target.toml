@@ -1,0 +1,25 @@
+# PyTorch-YOLOv3 (eriklindernoren): the repo's training script on coco128, a 128-image
+# COCO subset in the same label format. A harder target: detection with a custom loss,
+# per-image CPU augmentation and data-dependent indexing in helper code. Evaluation and
+# checkpoints, which the repo runs every epoch (8 steps here), are moved past the run.
+repo = "https://github.com/eriklindernoren/PyTorch-YOLOv3"
+commit = "1d621c8489e22c76ceb93bb2397ac6c8dfb5ceb7"
+command = "python -m pytorchyolo.train --model config/yolov3.cfg --data data/coco128/coco128.data --evaluation_interval 1000 --checkpoint_interval 1000"
+
+[image]
+apt = ["libgl1", "libglib2.0-0"]
+pip = ["numpy<2", "imgaug==0.4.0", "terminaltables", "tensorboard", "matplotlib", "tqdm", "scipy", "torchsummary"]
+
+[data]
+dataset = "coco128"
+path = "data/coco128"
+download = '''python -c "
+import pathlib, shutil, urllib.request, zipfile
+urllib.request.urlretrieve('https://github.com/ultralytics/assets/releases/download/v0.0.0/coco128.zip', 'coco128.zip')
+zipfile.ZipFile('coco128.zip').extractall('.')
+for p in pathlib.Path('coco128').iterdir():
+    shutil.move(str(p), '.')
+images = sorted(pathlib.Path('images/train2017').glob('*.jpg'))
+pathlib.Path('train.txt').write_text(''.join(f'data/coco128/{p}\n' for p in images))
+pathlib.Path('coco128.data').write_text('classes=80\ntrain=data/coco128/train.txt\nvalid=data/coco128/train.txt\nnames=data/coco.names\n')
+" && rm -r coco128 coco128.zip'''

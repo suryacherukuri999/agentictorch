@@ -34,8 +34,10 @@ CPU_CORES = 8.0
 MEMORY_GIB = 16
 # Image pull, container start and data staging, on top of the run's own timeout.
 STARTUP_ALLOWANCE = 600
-# Billed time before our code starts in a container (image load, Python start), for costing.
-BILLED_STARTUP = 60
+# Billed time outside our own timer in each container (image load, Python start), for
+# costing. Measured on 2026-10-25: Modal billed about 10 s per container beyond it,
+# over 503 L4 containers.
+BILLED_STARTUP = 10
 MAX_UPLOAD = 200 * 2**20
 
 base_image = (
