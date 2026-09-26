@@ -97,6 +97,24 @@ render in bf16 gave about 2.5x, where the agent kept only TF32. But blind patchi
 also shipped a slowdown on ganilla and a crash on pytorch-ddpm. The agent shipped
 neither, and its keep rule caught three harmful attempts of its own.
 
+### Does the model matter?
+
+Yes, for the bigger changes. On x-transformers, where the agent with gpt-6-luna kept
+nothing, the same agent with gpt-6.1-sol (a stronger model at 20 times the price)
+made training 5.52x faster on an L4, with the loss within noise, for $0.44 of API
+credit. It turned on the library's flash attention, bf16 through Accelerate,
+torch.compile and fused Adam, and beat the hand fix (4.13x). Like the hand
+experiment, it also tried copying whole batches to the GPU instead of single
+samples, measured no gain, and reverted it.
+
+It also kept torch.compile on rectified-flow-pytorch and pytorch-ddpm, which
+gpt-6-luna never got to work. The month's GPU credit ran out before the final
+paired measurement of those two runs, so they aren't counted here yet.
+
+| Target | gpt-6-luna | gpt-6.1-sol |
+|---|---|---|
+| x-transformers | nothing kept | 5.52x |
+
 ### Planted test suite
 
 Small scripts of our own (ResNet-18 on CIFAR-10, a character-level GPT, DistilBERT),

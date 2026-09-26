@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from hotloop.harness import runner
+from hotloop.profile import summary
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -121,7 +122,10 @@ def test_profile_run_summarizes_the_measured_steps():
     assert "waiting on the DataLoader" in result["profile_text"]
 
 
-def test_profile_names_the_exact_repo_line_behind_each_op():
+def test_profile_names_the_exact_repo_line_behind_each_op(monkeypatch):
+    # The ops of this tiny CPU model take about the same time, so which ones make the
+    # summary's top list varies from run to run; check all of them.
+    monkeypatch.setattr(summary, "TOP", 1000)
     command = f"{sys.executable} tiny_train.py"
     result = runner.run(command, FIXTURES, steps=5, warmup=3, timeout=120, profile=True)
     ops = {op["name"]: op for op in result["profile"]["top_ops"]}

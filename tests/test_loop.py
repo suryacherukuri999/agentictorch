@@ -159,3 +159,21 @@ def test_a_model_failure_ends_the_run_but_keeps_what_was_measured(session, monke
     assert run.stopped == "the model failed: ornith: timed out"
     assert len(session.kept) == 1
     assert run.final is not None and run.final.verdict.keep
+
+
+def test_a_failed_final_measurement_still_gives_a_report(session, monkeypatch):
+    def broke(self):
+        raise RuntimeError("Modal spend this month is $29.00")
+
+    monkeypatch.setattr(session_module.Session, "final", broke)
+    script = iter(SCRIPT)
+    monkeypatch.setattr(
+        loop.llm, "chat", lambda m, msgs, t: llm.Reply(next(script), 1, 1, 0.0, False)
+    )
+    run = loop.run(session, llm.Model("m", "http://x"))
+
+    assert run.final is None and len(session.kept) == 1
+    assert (
+        run.stopped
+        == "the final measurement failed: RuntimeError: Modal spend this month is $29.00"
+    )

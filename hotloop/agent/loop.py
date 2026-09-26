@@ -162,9 +162,15 @@ def run(
         if toolbox.finished is not None or session.rounds_left == 0:
             break
     result.summary = toolbox.finished
-    if not setup.measured:
-        if session.diff():
-            result.final = session.benchmark(f"{setup.name} patch, made without measuring")
-    elif session.kept:
-        result.final = session.final()
+    try:
+        if not setup.measured:
+            if session.diff():
+                result.final = session.benchmark(f"{setup.name} patch, made without measuring")
+        elif session.kept:
+            result.final = session.final()
+    except Exception as e:
+        # The report still lists every measured attempt; the final pair can be rerun
+        # from the working copy with `hotloop ab`.
+        result.stopped = f"the final measurement failed: {type(e).__name__}: {e}"
+        log(f"stopped: {result.stopped}")
     return result
