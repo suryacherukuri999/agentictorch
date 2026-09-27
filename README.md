@@ -11,18 +11,19 @@ Every number below comes from a run saved in `results/`, and
 original code with the changed code in pairs: both run in the same container on the
 same GPU, once per seed (two seeds), for 50 measured steps after 10 warm-up steps.
 
-### The agent on 12 real repos
+### The agent on 13 real repos
 
 The agent ran with gpt-6-luna, a small OpenAI model; all its runs together used
-$0.29 of API credit. For each repo where it kept a change, the original and the
+$0.31 of API credit. For each repo where it kept a change, the original and the
 changed code were measured again on an A100:
 
 | Repo | Stars | GPU | Before (ms/step) | After (ms/step) | Speedup | Loss | Fixes | Pull request |
 |---|---|---|---|---|---|---|---|---|
 | [monologg/JointBERT](https://github.com/monologg/JointBERT) | 749 | A100-SXM4-40GB | 67.4 | 17.3 | 3.90x | within noise | bf16 autocast, fused AdamW, torch.compile with CUDA graphs | not sent: no outside pull request merged in 12 months |
 | [Blealtan/efficient-kan](https://github.com/Blealtan/efficient-kan) | 4,660 | A100-SXM4-40GB | 13.7 | 4.0 | 3.42x | within noise | DataLoader workers with pinned memory, torch.compile | not sent: no outside pull request merged in 12 months |
-| [yenchenlin/nerf-pytorch](https://github.com/yenchenlin/nerf-pytorch) | 6,057 | A100-SXM4-80GB | 80.8 | 39.4 | 2.05x | within noise | TF32 matmuls | not sent: no outside pull request merged in 12 months |
+| [yenchenlin/nerf-pytorch](https://github.com/yenchenlin/nerf-pytorch) | 6,058 | A100-SXM4-80GB | 80.8 | 39.4 | 2.05x | within noise | TF32 matmuls | not sent: no outside pull request merged in 12 months |
 | [eriklindernoren/PyTorch-GAN](https://github.com/eriklindernoren/PyTorch-GAN) | 17,457 | A100-SXM4-40GB | 24.5 | 12.0 | 2.04x | within noise | DataLoader workers with pinned memory | not sent: no outside pull request merged in 12 months |
+| [eriklindernoren/PyTorch-YOLOv3](https://github.com/eriklindernoren/PyTorch-YOLOv3) | 7,436 | A100-SXM4-40GB | 265.4 | 146.4 | 1.81x | within noise | bf16 autocast, persistent DataLoader workers, fused Adam | not sent: no outside pull request merged in 12 months |
 | [Zeleni9/pytorch-wgan](https://github.com/Zeleni9/pytorch-wgan) | 809 | A100-SXM4-40GB | 39.5 | 28.7 | 1.38x | within noise | DataLoader workers with pinned memory | not sent: no outside pull request merged in 12 months |
 | [lucidrains/vit-pytorch](https://github.com/lucidrains/vit-pytorch) | 25,553 | A100-SXM4-80GB | 19.8 | 15.8 | 1.22x | within noise | DataLoader workers with pinned memory, fused Adam | drafted, not sent |
 | [w86763777/pytorch-ddpm](https://github.com/w86763777/pytorch-ddpm) | 646 | A100-SXM4-40GB | 144.7 | 118.3 | 1.22x | within noise | bf16 autocast for the forward pass and loss | not sent: no outside pull request merged in 12 months |
@@ -30,16 +31,17 @@ changed code were measured again on an A100:
 | [Spijkervet/SimCLR](https://github.com/Spijkervet/SimCLR) | 825 | A100-SXM4-40GB | 178.1 | 175.8 | 1.01x (1.01x is within noise) | within noise | bf16 autocast, channels_last | not sent: no outside pull request merged in 12 months |
 | [giddyyupp/ganilla](https://github.com/giddyyupp/ganilla) | 482 | L4 | 130.5 |  | nothing kept |  |  | not sent: no outside pull request merged in 12 months |
 | [lucidrains/transfusion-pytorch](https://github.com/lucidrains/transfusion-pytorch) | 1,408 | L4 | 85.3 |  | nothing kept |  |  | not sent |
-| [lucidrains/x-transformers](https://github.com/lucidrains/x-transformers) | 5,960 | L4 | 717.8 |  | nothing kept |  |  | not sent |
+| [lucidrains/x-transformers](https://github.com/lucidrains/x-transformers) | 5,961 | L4 | 717.8 |  | nothing kept |  |  | drafted from the gpt-6.1-sol run, not sent |
 
 - **GPU** is the card Modal assigned to an A100-40GB request; every request was
   billed as an A100-40GB. Both sides of a pair always ran on the same card.
 - **SimCLR:** the same changes were 2.06x faster on an L4. On the A100 the GPU work
   shrank until image augmentation on 8 CPU cores set the pace (data wait rose from
-  4% to 36% of each step).
+  4% to 36% of each step). PyTorch-YOLOv3 shows the same effect more mildly: 2.07x
+  on an L4, 1.81x on the A100, with 39% of each A100 step waiting on data.
 - **Nothing kept** means every change the agent tried crashed, was slower, or was
   within noise, so the original code stands.
-- **Pull requests:** none sent yet. 8 of the 12 repos haven't merged a pull request
+- **Pull requests:** none sent yet. 9 of the 13 repos haven't merged a pull request
   from outside their team in the last 12 months.
 
 ### Against a hand fix
@@ -54,6 +56,7 @@ L4, as a reference for how much the agent leaves on the table:
 | simclr | L4 | 416.6 | 2.06x | bf16 autocast, channels_last | 2.44x | bf16 autocast, channels_last, cudnn autotuning, pinned copies, no per-step epoch-loss sync |
 | efficient-kan | L4 | 17.3 | 3.40x | DataLoader workers with pinned memory, torch.compile | 2.36x | num_workers=4, pin_memory=True on the training DataLoader (by hand, as a reference for the agent) |
 | pytorch-ddpm | L4 | 549.2 | 1.29x | bf16 autocast for the forward pass and loss | 2.28x | bf16 autocast, compiled trainer, fused EMA update, one loss sync, pinned copies |
+| pytorch-yolov3 | L4 | 529.2 | 2.07x | bf16 autocast, persistent DataLoader workers, fused Adam | 2.28x | bf16 forward with a float32 loss, channels_last convolutions, persistent workers, fewer syncs in the loss |
 | jointbert | L4 | 137.9 | 2.65x | bf16 autocast, fused AdamW, torch.compile with CUDA graphs | 2.20x | bf16 autocast, fused AdamW, no per-step loss sync |
 | pytorch-gan-dcgan | L4 | 28.9 | 2.03x | DataLoader workers with pinned memory | 1.90x | pass the existing --n_cpu option (default 8) to the DataLoader as num_workers |
 | vit-pytorch | L4 | 26.7 | 1.37x | DataLoader workers with pinned memory, fused Adam | 1.74x | loader workers, torch.compile, one sync for the printed losses |
@@ -99,21 +102,25 @@ neither, and its keep rule caught three harmful attempts of its own.
 
 ### Does the model matter?
 
-Yes, for the bigger changes. On x-transformers, where the agent with gpt-6-luna kept
-nothing, the same agent with gpt-6.1-sol (a stronger model at 20 times the price)
-made training 5.52x faster on an L4, with the loss within noise, for $0.44 of API
-credit. It turned on the library's flash attention, bf16 through Accelerate,
-torch.compile and fused Adam, and beat the hand fix (4.13x). Like the hand
-experiment, it also tried copying whole batches to the GPU instead of single
-samples, measured no gain, and reverted it.
+Yes, for the bigger changes. The same agent with gpt-6.1-sol, a stronger model at 20
+times the price, on the three repos where gpt-6-luna fell furthest short of the hand
+fix, and on PyTorch-YOLOv3, a detection repo picked for slowdowns hidden in helper
+code. All on an L4, each against the original code, loss within noise:
 
-It also kept torch.compile on rectified-flow-pytorch and pytorch-ddpm, which
-gpt-6-luna never got to work. The month's GPU credit ran out before the final
-paired measurement of those two runs, so they aren't counted here yet.
+| Target | gpt-6-luna | gpt-6.1-sol | Hand fix |
+|---|---|---|---|
+| x-transformers | nothing kept | 5.52x | 4.13x |
+| rectified-flow-pytorch | 1.17x | 3.13x | 3.12x |
+| pytorch-ddpm | 1.29x | 2.54x | 2.28x |
+| pytorch-yolov3 | 2.07x | 2.10x | 2.28x |
 
-| Target | gpt-6-luna | gpt-6.1-sol |
-|---|---|---|
-| x-transformers | nothing kept | 5.52x |
+gpt-6.1-sol got torch.compile working on all three of the first repos and turned on
+x-transformers' flash attention, which gpt-6-luna never did; it matched or beat the
+hand fix there. On PyTorch-YOLOv3 the winning fixes were standard ones (bf16, and
+keeping DataLoader workers alive across the 8-step epochs), and both models found
+them. The 23 host-device syncs per step in its loss code, which the profiler traced
+to their lines, turned out to cost nothing measurable: removing them on their own
+measured 1.01x. Each gpt-6.1-sol run cost $0.44 to $0.76 of API credit.
 
 ### Planted test suite
 

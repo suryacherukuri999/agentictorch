@@ -57,7 +57,7 @@
   },
   {
    "repo": "lucidrains/x-transformers",
-   "stars": 5960,
+   "stars": 5961,
    "last_outside_merge": "2026-10-05",
    "outside_merges_6_months": 9,
    "outside_merges_12_months": 10,
@@ -153,7 +153,7 @@
   },
   {
    "repo": "yenchenlin/nerf-pytorch",
-   "stars": 6057,
+   "stars": 6058,
    "last_outside_merge": "2022-07-28",
    "outside_merges_6_months": 0,
    "outside_merges_12_months": 0,
@@ -293,6 +293,33 @@
      "merged": "2024-05-17",
      "author": "akaashdash",
      "title": "Allow interchangeability of KANLinear with nn.Linear"
+    }
+   ]
+  },
+  {
+   "repo": "eriklindernoren/PyTorch-YOLOv3",
+   "stars": 7436,
+   "last_outside_merge": "2024-11-17",
+   "outside_merges_6_months": 0,
+   "outside_merges_12_months": 0,
+   "latest": [
+    {
+     "number": 857,
+     "merged": "2024-11-17",
+     "author": "asptyz",
+     "title": "Update README.md"
+    },
+    {
+     "number": 764,
+     "merged": "2021-12-31",
+     "author": "alexandrefassio",
+     "title": "Fixed reproducibility issue related to imgaug"
+    },
+    {
+     "number": 761,
+     "merged": "2021-12-29",
+     "author": "jaagut",
+     "title": "Add output print and cleanup signature"
     }
    ]
   }
