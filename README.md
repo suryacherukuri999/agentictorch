@@ -11,16 +11,17 @@ Every number below comes from a run saved in `results/`, and
 original code with the changed code in pairs: both run in the same container on the
 same GPU, once per seed (two seeds), for 50 measured steps after 10 warm-up steps.
 
-### The agent on 13 real repos
+### The agent on 14 real repos
 
 The agent ran with gpt-6-luna, a small OpenAI model; all its runs together used
-$0.31 of API credit. For each repo where it kept a change, the original and the
+$0.32 of API credit. For each repo where it kept a change, the original and the
 changed code were measured again on an A100:
 
 | Repo | Stars | GPU | Before (ms/step) | After (ms/step) | Speedup | Loss | Fixes | Pull request |
 |---|---|---|---|---|---|---|---|---|
 | [monologg/JointBERT](https://github.com/monologg/JointBERT) | 749 | A100-SXM4-40GB | 67.4 | 17.3 | 3.90x | within noise | bf16 autocast, fused AdamW, torch.compile with CUDA graphs | not sent: no outside pull request merged in 12 months |
 | [Blealtan/efficient-kan](https://github.com/Blealtan/efficient-kan) | 4,660 | A100-SXM4-40GB | 13.7 | 4.0 | 3.42x | within noise | DataLoader workers with pinned memory, torch.compile | not sent: no outside pull request merged in 12 months |
+| [yanx27/Pointnet_Pointnet2_pytorch](https://github.com/yanx27/Pointnet_Pointnet2_pytorch) | 4,967 | A100-SXM4-40GB | 235.4 | 108.3 | 2.17x | within noise | no sync per point in farthest point sampling | not sent: no outside pull request merged in 12 months |
 | [yenchenlin/nerf-pytorch](https://github.com/yenchenlin/nerf-pytorch) | 6,058 | A100-SXM4-80GB | 80.8 | 39.4 | 2.05x | within noise | TF32 matmuls | not sent: no outside pull request merged in 12 months |
 | [eriklindernoren/PyTorch-GAN](https://github.com/eriklindernoren/PyTorch-GAN) | 17,457 | A100-SXM4-40GB | 24.5 | 12.0 | 2.04x | within noise | DataLoader workers with pinned memory | not sent: no outside pull request merged in 12 months |
 | [eriklindernoren/PyTorch-YOLOv3](https://github.com/eriklindernoren/PyTorch-YOLOv3) | 7,436 | A100-SXM4-40GB | 265.4 | 146.4 | 1.81x | within noise | bf16 autocast, persistent DataLoader workers, fused Adam | not sent: no outside pull request merged in 12 months |
@@ -41,7 +42,7 @@ changed code were measured again on an A100:
   on an L4, 1.81x on the A100, with 39% of each A100 step waiting on data.
 - **Nothing kept** means every change the agent tried crashed, was slower, or was
   within noise, so the original code stands.
-- **Pull requests:** none sent yet. 9 of the 13 repos haven't merged a pull request
+- **Pull requests:** none sent yet. 10 of the 14 repos haven't merged a pull request
   from outside their team in the last 12 months.
 
 ### Against a hand fix
@@ -53,6 +54,7 @@ L4, as a reference for how much the agent leaves on the table:
 |---|---|---|---|---|---|---|
 | x-transformers | L4 | 707.7 | nothing kept |  | 4.13x | batches built on the CPU and copied once, flash attention, bf16 |
 | rectified-flow-pytorch | L4 | 439.4 | 1.17x | DataLoader workers with pinned memory | 3.12x | bf16, torch.compile through accelerate, loader workers |
+| pointnet2 | L4 | 274.0 | 1.65x | no sync per point in farthest point sampling | 2.61x | no syncs in farthest point sampling and grouping, sampling replayed from a CUDA graph, topk instead of a full sort, accuracy kept on the GPU |
 | simclr | L4 | 416.6 | 2.06x | bf16 autocast, channels_last | 2.44x | bf16 autocast, channels_last, cudnn autotuning, pinned copies, no per-step epoch-loss sync |
 | efficient-kan | L4 | 17.3 | 3.40x | DataLoader workers with pinned memory, torch.compile | 2.36x | num_workers=4, pin_memory=True on the training DataLoader (by hand, as a reference for the agent) |
 | pytorch-ddpm | L4 | 549.2 | 1.29x | bf16 autocast for the forward pass and loss | 2.28x | bf16 autocast, compiled trainer, fused EMA update, one loss sync, pinned copies |
@@ -104,8 +106,9 @@ neither, and its keep rule caught three harmful attempts of its own.
 
 Yes, for the bigger changes. The same agent with gpt-6.1-sol, a stronger model at 20
 times the price, on the three repos where gpt-6-luna fell furthest short of the hand
-fix, and on PyTorch-YOLOv3, a detection repo picked for slowdowns hidden in helper
-code. All on an L4, each against the original code, loss within noise:
+fix, and on two repos picked because their slowdowns hide in helper code:
+PyTorch-YOLOv3 (detection) and PointNet++ (point clouds). All on an L4, each against
+the original code, loss within noise:
 
 | Target | gpt-6-luna | gpt-6.1-sol | Hand fix |
 |---|---|---|---|
@@ -113,6 +116,7 @@ code. All on an L4, each against the original code, loss within noise:
 | rectified-flow-pytorch | 1.17x | 3.13x | 3.12x |
 | pytorch-ddpm | 1.29x | 2.54x | 2.28x |
 | pytorch-yolov3 | 2.07x | 2.10x | 2.28x |
+| pointnet2 | 1.65x | 4.89x | 2.61x |
 
 gpt-6.1-sol got torch.compile working on all three of the first repos and turned on
 x-transformers' flash attention, which gpt-6-luna never did; it matched or beat the
@@ -120,7 +124,19 @@ hand fix there. On PyTorch-YOLOv3 the winning fixes were standard ones (bf16, an
 keeping DataLoader workers alive across the 8-step epochs), and both models found
 them. The 23 host-device syncs per step in its loss code, which the profiler traced
 to their lines, turned out to cost nothing measurable: removing them on their own
-measured 1.01x. Each gpt-6.1-sol run cost $0.44 to $0.76 of API credit.
+measured 1.01x.
+
+PointNet++ was the hardest. Its farthest point sampling is a Python loop of 640
+steps per forward pass, and a masked update inside it (`distance[mask] = dist[mask]`)
+made the CPU wait for the GPU 1,280 times per step; the GPU was busy 11% of the
+time. Both models found that line in their first round, since the profiler names
+it. Only gpt-6.1-sol got past the thousands of tiny kernel launches the loop still
+made: it wrote a Triton kernel that runs the whole sampling loop at once, then added
+bf16 for the convolutions. The kernel picks exactly the points the original loop
+picks (identical in 40 of 40 test runs on a GPU, including inputs with many ties).
+The hand fix replayed the loop from a CUDA graph instead and reached 2.61x.
+
+Each gpt-6.1-sol run cost $0.44 to $0.76 of API credit.
 
 ### Planted test suite
 

@@ -322,6 +322,33 @@
      "title": "Add output print and cleanup signature"
     }
    ]
+  },
+  {
+   "repo": "yanx27/Pointnet_Pointnet2_pytorch",
+   "stars": 4967,
+   "last_outside_merge": "2022-08-30",
+   "outside_merges_6_months": 0,
+   "outside_merges_12_months": 0,
+   "latest": [
+    {
+     "number": 186,
+     "merged": "2022-08-30",
+     "author": "tarmas99",
+     "title": "Update train_semseg.py and README.md"
+    },
+    {
+     "number": 188,
+     "merged": "2022-08-30",
+     "author": "lly007",
+     "title": "Update README.md"
+    },
+    {
+     "number": 113,
+     "merged": "2021-06-15",
+     "author": "yushiangw",
+     "title": "fix query_ball_point"
+    }
+   ]
   }
  ]
 }

@@ -1,0 +1,4 @@
+Run on 2026-10-25 with: modal run results/checks/pointnet2_fps_equivalence.py
+Output: identical picks in 40 of 40 runs NVIDIA L4
+(20 trials x 2 shapes: 24 clouds of 1024 points sampling 512, and 512 sampling 128;
+ every fifth trial rounds the inputs to create many exact distance ties.)
