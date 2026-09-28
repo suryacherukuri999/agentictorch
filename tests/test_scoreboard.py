@@ -142,3 +142,32 @@ def test_versus_compares_the_agent_with_the_fastest_hand_fix(tmp_path, monkeypat
 
     [row] = scoreboard.versus().splitlines()[2:]
     assert row == "| ddpm | L4 | 550.0 | 1.29x | 1 changes | 2.28x | hand/ddpm-hand |"
+
+
+def test_three_way_uses_final_pairs_for_lost_reports_and_averages(tmp_path, monkeypatch):
+    import json
+
+    from hotloop import scoreboard
+
+    def save(path, record):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(record))
+
+    luna, sol = scoreboard.MAIN_MODEL, scoreboard.MODELS["gpt-6.1-sol"].name
+    for target, a, b in [("ddpm", 1.29, 2.54), ("nerf", 1.18, None)]:
+        run = {"target": target, "model": luna, "speedup": a, "kept": ["x"], "attempts": []}
+        save(tmp_path / f"eval/agent/{target}/agent-gpt-6-luna-20261025-010000.json", run)
+        if b:
+            save(tmp_path / f"final-pairs/{target}-sol.json",
+                 {"target": target, "speedup": b, "keep": True})  # fmt: skip
+        save(
+            tmp_path / f"hand/{target}-hand.json", {"target": target, "speedup": 2.0, "keep": True}
+        )
+    save(tmp_path / "eval/agent/nerf/agent-gpt-6.1-sol-20261025-020000.json",
+         {"target": "nerf", "model": sol, "speedup": 1.0, "kept": [], "attempts": []})  # fmt: skip
+    monkeypatch.setattr(scoreboard, "RESULTS", tmp_path)
+
+    lines = scoreboard.three_way().splitlines()
+    assert lines[2] == "| ddpm | 1.29x | 2.54x | 2.00x |"
+    assert lines[3] == "| nerf | 1.18x | 1.00x | 2.00x |"
+    assert lines[4].startswith("| **Geometric mean** | **1.23x** | **1.59x** | **2.00x** |")

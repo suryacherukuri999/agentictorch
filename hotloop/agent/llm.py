@@ -35,6 +35,9 @@ class Model:
     key_env: str | None = None
     usd_per_m_input: float = 0.0
     usd_per_m_output: float = 0.0
+    # Prompt tokens the provider serves from its cache; an agent resends its whole
+    # conversation every turn, so most input is cached. 0 means billed at full price.
+    usd_per_m_cached_input: float = 0.0
     temperature: float = 0.0
     reasoning_effort: str | None = None  # for thinking models; omitted when None
     max_tokens_field: str = "max_tokens"  # newer OpenAI models want max_completion_tokens
@@ -89,9 +92,18 @@ def chat(model: Model, messages: list[dict], tools: list[dict], max_tokens: int 
 
 
 def paid_spend() -> float:
+    """The ledger's total. An entry with "reconciled_total" sets the total to the spend
+    read from the provider's own billing, and later entries add to it."""
     if not LEDGER.exists():
         return 0.0
-    return sum(json.loads(line)["cost"] for line in LEDGER.read_text().splitlines() if line)
+    total = 0.0
+    for line in LEDGER.read_text().splitlines():
+        if line:
+            entry = json.loads(line)
+            total = (
+                entry["reconciled_total"] if "reconciled_total" in entry else total + entry["cost"]
+            )
+    return total
 
 
 def api_key(name: str) -> str | None:
@@ -196,6 +208,7 @@ def _as_chat(body: dict) -> dict:
         "usage": {
             "prompt_tokens": usage.get("input_tokens", 0),
             "completion_tokens": usage.get("output_tokens", 0),
+            "prompt_tokens_details": usage.get("input_tokens_details") or {},
         },
     }
 
@@ -203,17 +216,24 @@ def _as_chat(body: dict) -> dict:
 def _reply(model: Model, body: dict, cached: bool) -> Reply:
     usage = body.get("usage") or {}
     tokens_in, tokens_out = usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
+    from_cache = (usage.get("prompt_tokens_details") or {}).get("cached_tokens") or 0
     return Reply(
         message=body["choices"][0]["message"],
         input_tokens=tokens_in,
         output_tokens=tokens_out,
-        cost=0.0 if cached else _cost(model, tokens_in, tokens_out),
+        cost=0.0 if cached else _cost(model, tokens_in, tokens_out, from_cache),
         cached=cached,
     )
 
 
-def _cost(model: Model, tokens_in: int, tokens_out: int) -> float:
-    return (tokens_in * model.usd_per_m_input + tokens_out * model.usd_per_m_output) / 1e6
+def _cost(model: Model, tokens_in: int, tokens_out: int, from_cache: int = 0) -> float:
+    cached_price = model.usd_per_m_cached_input or model.usd_per_m_input
+    fresh = tokens_in - from_cache
+    return (
+        fresh * model.usd_per_m_input
+        + from_cache * cached_price
+        + tokens_out * model.usd_per_m_output
+    ) / 1e6
 
 
 def _record(model: Model, reply: Reply) -> None:

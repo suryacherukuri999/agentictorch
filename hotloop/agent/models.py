@@ -21,7 +21,7 @@ MODELS = {
         temperature=1.0,
     ),
     # Paid, for the final comparison only. Checked on developers.openai.com 2026-10-24:
-    # $0.10 per million input tokens and $0.50 per million output tokens, and Chat
+    # $0.10 per million input tokens ($0.01 cached) and $0.50 per million output tokens, and Chat
     # Completions allows tool calls only with reasoning effort "none".
     "gpt-6-luna": Model(
         "gpt-6-luna",
@@ -29,18 +29,21 @@ MODELS = {
         key_env="OPENAI_API_KEY",
         usd_per_m_input=0.10,
         usd_per_m_output=0.50,
+        usd_per_m_cached_input=0.01,
         reasoning_effort="none",
         max_tokens_field="max_completion_tokens",
     ),
     # Paid and stronger, to check whether a better model changes the outcome. Checked on
-    # developers.openai.com 2026-10-25: $2.00 per million input tokens and $10.00 per
-    # million output tokens; it takes tools with reasoning only through the Responses API.
+    # developers.openai.com 2026-10-25: $2.00 per million input tokens ($0.10 cached) and
+    # $10.00 per million output tokens; it takes tools with reasoning only through the
+    # Responses API.
     "gpt-6.1-sol": Model(
         "gpt-6.1-sol",
         "https://api.openai.com/v1",
         key_env="OPENAI_API_KEY",
         usd_per_m_input=2.00,
         usd_per_m_output=10.00,
+        usd_per_m_cached_input=0.10,
         reasoning_effort="medium",
         api="responses",
     ),

@@ -1,0 +1,41 @@
+# DETR (facebookresearch): transformer object detection on a COCO subset, 500 training
+# and 100 validation images from val2017 with their annotations, in one archive. A very
+# hard target: time is spread over CPU Hungarian matching, per-step syncs in logging and
+# losses, two DataLoader workers with heavy resizing, and variable image sizes.
+repo = "https://github.com/facebookresearch/detr"
+commit = "29901c51d7fe8712168b8d0d64351170bc0f83e0"
+command = "tar xf data/coco/subset.tar -C data/coco && python main.py --coco_path data/coco --output_dir out"
+
+[image]
+pip = ["pycocotools", "scipy", "packaging"]
+
+[data]
+dataset = "coco-detr-600"
+path = "data/coco"
+download = '''python -c "
+import io, json, tarfile, urllib.request, zipfile
+from concurrent.futures import ThreadPoolExecutor
+base = 'http://images.cocodataset.org'
+urllib.request.urlretrieve(f'{base}/annotations/annotations_trainval2017.zip', 'ann.zip')
+coco = json.loads(zipfile.ZipFile('ann.zip').read('annotations/instances_val2017.json'))
+annotated = {a['image_id'] for a in coco['annotations'] if not a['iscrowd']}
+images = sorted((i for i in coco['images'] if i['id'] in annotated), key=lambda i: i['id'])[:600]
+splits = {'train2017': images[:500], 'val2017': images[500:]}
+def fetch(image):
+    return urllib.request.urlopen(f'{base}/val2017/{image[\"file_name\"]}', timeout=60).read()
+with tarfile.open('subset.tar', 'w') as tar:
+    def add(name, data):
+        info = tarfile.TarInfo(name)
+        info.size = len(data)
+        tar.addfile(info, io.BytesIO(data))
+    for split, chosen in splits.items():
+        ids = {i['id'] for i in chosen}
+        subset = {k: coco[k] for k in ('info', 'licenses', 'categories')}
+        subset['images'] = chosen
+        subset['annotations'] = [a for a in coco['annotations'] if a['image_id'] in ids]
+        add(f'annotations/instances_{split}.json', json.dumps(subset).encode())
+        with ThreadPoolExecutor(16) as pool:
+            for image, data in zip(chosen, pool.map(fetch, chosen)):
+                add(f'{split}/{image[\"file_name\"]}', data)
+print(sum(len(v) for v in splits.values()), 'images')
+" && rm ann.zip'''

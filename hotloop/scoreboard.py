@@ -196,6 +196,32 @@ def versus() -> str:
     return "\n".join(lines)
 
 
+def shipped(record: dict) -> float:
+    """What a run ships: its speedup if the keep rule kept it, else the original's 1.00x."""
+    kept = record["keep"] if "keep" in record else bool(record["kept"])
+    return record["speedup"] if kept else 1.0
+
+
+def three_way() -> str:
+    """Per repo: the agent with the cheap and the stronger model and the fastest hand fix,
+    each against the original on an L4, and their geometric means over the repos all
+    three ran. A stronger-model run whose report was lost keeps its later final pair."""
+    luna = latest("agent", MAIN_MODEL)
+    sol = latest("agent", MODELS["gpt-6.1-sol"].name)
+    for path in (RESULTS / "final-pairs").glob("*.json"):
+        record = json.loads(path.read_text())
+        sol.setdefault(record["target"], record)
+    hands = hand_fixes()
+    targets = sorted(t for t in set(luna) & set(sol) & set(hands) if not t.startswith("bench-"))
+    rows = [(t, shipped(luna[t]), shipped(sol[t]), shipped(hands[t])) for t in targets]
+    lines = ["| Repo | gpt-6-luna | gpt-6.1-sol | Hand fix |", "|---|---|---|---|"]
+    lines += [f"| {t} | {a:.2f}x | {b:.2f}x | {c:.2f}x |" for t, a, b, c in rows]
+    if rows:
+        means = [geometric_mean(r[i] for r in rows) for i in (1, 2, 3)]
+        lines.append("| **Geometric mean** | " + " | ".join(f"**{m:.2f}x**" for m in means) + " |")
+    return "\n".join(lines)
+
+
 def headline() -> str:
     """One row per real repo: the original code against the agent's kept changes,
     from the latest paired run saved for it in results/headline."""
@@ -287,3 +313,5 @@ if __name__ == "__main__":
     print(headline())
     print()
     print(versus())
+    print()
+    print(three_way())

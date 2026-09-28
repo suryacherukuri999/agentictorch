@@ -119,3 +119,21 @@ def test_responses_models_send_items_and_get_chat_shaped_replies(monkeypatch):
         *output,
         {"type": "function_call_output", "call_id": "call_1", "output": "x = 1"},
     ]
+
+
+def test_cached_prompt_tokens_cost_the_cached_price(monkeypatch):
+    body = {
+        "choices": [{"message": {"role": "assistant", "content": "hi"}}],
+        "usage": {"prompt_tokens": 1000, "completion_tokens": 10,
+                  "prompt_tokens_details": {"cached_tokens": 900}},
+    }  # fmt: skip
+    monkeypatch.setattr(llm, "_post", lambda model, request: body)
+    model = llm.Model("m", "https://api.example.com/v1", "EXAMPLE_KEY", 2.0, 10.0, 0.10)
+    reply = llm.chat(model, [{"role": "user", "content": "x"}], [])
+    assert reply.cost == pytest.approx((100 * 2.0 + 900 * 0.10 + 10 * 10.0) / 1e6)
+
+
+def test_a_reconciled_total_restarts_the_spend():
+    entries = [{"cost": 3.0}, {"reconciled_total": 0.41, "cost": 0.0}, {"cost": 0.05}]
+    llm.LEDGER.write_text("".join(json.dumps(e) + "\n" for e in entries))
+    assert llm.paid_spend() == pytest.approx(0.46)
