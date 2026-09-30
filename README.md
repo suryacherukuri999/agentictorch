@@ -11,11 +11,11 @@ Every number below comes from a run saved in `results/`, and
 original code with the changed code in pairs: both run in the same container on the
 same GPU, once per seed (two seeds), for 50 measured steps after 10 warm-up steps.
 
-### The agent on 14 real repos
+### The agent on 15 real repos
 
-The agent ran with gpt-6-luna, a small OpenAI model; all its runs together used
-$0.32 of API credit. For each repo where it kept a change, the original and the
-changed code were measured again on an A100:
+The agent ran with gpt-6-luna, a small OpenAI model; every gpt-6-luna call in the
+project, all setups included, cost $0.08 of API credit. For each repo where it
+kept a change, the original and the changed code were measured again on an A100:
 
 | Repo | Stars | GPU | Before (ms/step) | After (ms/step) | Speedup | Loss | Fixes | Pull request |
 |---|---|---|---|---|---|---|---|---|
@@ -30,6 +30,7 @@ changed code were measured again on an A100:
 | [w86763777/pytorch-ddpm](https://github.com/w86763777/pytorch-ddpm) | 646 | A100-SXM4-40GB | 144.7 | 118.3 | 1.22x | within noise | bf16 autocast for the forward pass and loss | not sent: no outside pull request merged in 12 months |
 | [lucidrains/rectified-flow-pytorch](https://github.com/lucidrains/rectified-flow-pytorch) | 489 | A100 80GB PCIe | 245.9 | 202.3 | 1.22x | within noise | DataLoader workers with pinned memory | issue drafted, not sent |
 | [Spijkervet/SimCLR](https://github.com/Spijkervet/SimCLR) | 825 | A100-SXM4-40GB | 178.1 | 175.8 | 1.01x (1.01x is within noise) | within noise | bf16 autocast, channels_last | not sent: no outside pull request merged in 12 months |
+| [facebookresearch/detr](https://github.com/facebookresearch/detr) | 15,352 | L4 | 205.0 |  | nothing kept |  |  | not sent: no outside pull request merged in 12 months |
 | [giddyyupp/ganilla](https://github.com/giddyyupp/ganilla) | 482 | L4 | 130.5 |  | nothing kept |  |  | not sent: no outside pull request merged in 12 months |
 | [lucidrains/transfusion-pytorch](https://github.com/lucidrains/transfusion-pytorch) | 1,408 | L4 | 85.3 |  | nothing kept |  |  | not sent |
 | [lucidrains/x-transformers](https://github.com/lucidrains/x-transformers) | 5,961 | L4 | 717.8 |  | nothing kept |  |  | drafted from the gpt-6.1-sol run, not sent |
@@ -42,36 +43,38 @@ changed code were measured again on an A100:
   on an L4, 1.81x on the A100, with 39% of each A100 step waiting on data.
 - **Nothing kept** means every change the agent tried crashed, was slower, or was
   within noise, so the original code stands.
-- **Pull requests:** none sent yet. 10 of the 14 repos haven't merged a pull request
+- **Pull requests:** none sent yet. 11 of the 15 repos haven't merged a pull request
   from outside their team in the last 12 months.
 
 ### Against a hand fix
 
 The same repos with the usual fixes applied by hand and measured the same way, on an
-L4, as a reference for how much the agent leaves on the table:
+L4, as a reference for how much the agent with gpt-6-luna leaves on the table:
 
 | Repo | GPU | Original (ms/step) | Agent | Agent's changes | Hand fix | Hand fix's changes |
 |---|---|---|---|---|---|---|
+| efficient-kan | L4 | 17.3 | 3.40x | DataLoader workers with pinned memory, torch.compile | 4.30x | loader workers with pinned memory, no per-step syncs, CUDA graphs through torch.compile, fused AdamW |
 | x-transformers | L4 | 707.7 | nothing kept |  | 4.13x | batches built on the CPU and copied once, flash attention, bf16 |
 | rectified-flow-pytorch | L4 | 439.4 | 1.17x | DataLoader workers with pinned memory | 3.12x | bf16, torch.compile through accelerate, loader workers |
 | pointnet2 | L4 | 274.0 | 1.65x | no sync per point in farthest point sampling | 2.61x | no syncs in farthest point sampling and grouping, sampling replayed from a CUDA graph, topk instead of a full sort, accuracy kept on the GPU |
 | simclr | L4 | 416.6 | 2.06x | bf16 autocast, channels_last | 2.44x | bf16 autocast, channels_last, cudnn autotuning, pinned copies, no per-step epoch-loss sync |
-| efficient-kan | L4 | 17.3 | 3.40x | DataLoader workers with pinned memory, torch.compile | 2.36x | num_workers=4, pin_memory=True on the training DataLoader (by hand, as a reference for the agent) |
 | pytorch-ddpm | L4 | 549.2 | 1.29x | bf16 autocast for the forward pass and loss | 2.28x | bf16 autocast, compiled trainer, fused EMA update, one loss sync, pinned copies |
 | pytorch-yolov3 | L4 | 529.2 | 2.07x | bf16 autocast, persistent DataLoader workers, fused Adam | 2.28x | bf16 forward with a float32 loss, channels_last convolutions, persistent workers, fewer syncs in the loss |
 | jointbert | L4 | 137.9 | 2.65x | bf16 autocast, fused AdamW, torch.compile with CUDA graphs | 2.20x | bf16 autocast, fused AdamW, no per-step loss sync |
-| pytorch-gan-dcgan | L4 | 28.9 | 2.03x | DataLoader workers with pinned memory | 1.90x | pass the existing --n_cpu option (default 8) to the DataLoader as num_workers |
+| pytorch-wgan | L4 | 77.9 | 1.18x | DataLoader workers with pinned memory | 2.17x | loader workers with pinned memory, noise sampled on the GPU, no generator gradients in critic steps, one sync per printed line, fused Adam, cudnn autotuning, bf16 networks with float32 outputs |
+| pytorch-gan-dcgan | L4 | 28.6 | 2.03x | DataLoader workers with pinned memory | 2.10x | loader workers with pinned memory, noise sampled on the GPU, one sync for the printed losses, fused Adam, cudnn autotuning |
 | vit-pytorch | L4 | 26.7 | 1.37x | DataLoader workers with pinned memory, fused Adam | 1.74x | loader workers, torch.compile, one sync for the printed losses |
 | transfusion-pytorch | L4 | 92.5 | nothing kept |  | 1.55x | loader workers, compiled transformer forward |
 | nerf-pytorch | L4 | 191.7 | 1.18x | TF32 matmuls | 1.30x | TF32, no per-step host copies or syncs, ray sampling on the GPU |
-| pytorch-wgan | L4 | 77.7 | 1.18x | DataLoader workers with pinned memory | 1.15x | add a --workers option (default 4) and pass it to the DataLoaders |
 | ganilla | L4 | 123.2 | nothing kept |  | 1.13x | compiled networks, cudnn autotuning, pinned non-blocking input copies |
+| detr | L4 | 195.4 | nothing kept |  | 1.06x | one sync for logging, box checks on the GPU, matcher indices copied once, pinned copies, 8 workers, bf16 forward |
 
-The agent matches or beats the hand fix on the standard fixes: mixed precision,
-DataLoader workers, fused optimizers, and torch.compile where it compiles cleanly. It
-falls short where the win needs a bigger or riskier change, such as flash attention
-behind a library flag (x-transformers) or compiling library code (rectified-flow,
-pytorch-ddpm, transfusion).
+With the standard fixes (mixed precision, DataLoader workers, fused optimizers),
+the agent came within 10% of the hand fix or beat it on JointBERT, PyTorch-GAN,
+PyTorch-YOLOv3 and nerf-pytorch. It fell far short where the win needed a bigger or
+riskier change, such as flash attention behind a library flag (x-transformers),
+compiling library code (rectified-flow, pytorch-ddpm, transfusion), or bf16 in a GAN
+whose gradient penalty takes a second backward pass (pytorch-wgan).
 
 ### Against simpler setups
 
@@ -104,27 +107,45 @@ neither, and its keep rule caught three harmful attempts of its own.
 
 ### Does the model matter?
 
-Yes, for the bigger changes. The same agent with gpt-6.1-sol, a stronger model at 20
-times the price, on the three repos where gpt-6-luna fell furthest short of the hand
-fix, and on two repos picked because their slowdowns hide in helper code:
-PyTorch-YOLOv3 (detection) and PointNet++ (point clouds). All on an L4, each against
-the original code, loss within noise:
+Yes. The same agent with gpt-6.1-sol, a stronger model at 20 times the price per
+token, on all 15 repos, next to gpt-6-luna and the hand fix. All on an L4, each
+against the original code, loss within noise; 1.00x means nothing was kept:
 
-| Target | gpt-6-luna | gpt-6.1-sol | Hand fix |
+| Repo | gpt-6-luna | gpt-6.1-sol | Hand fix |
 |---|---|---|---|
-| x-transformers | nothing kept | 5.52x | 4.13x |
-| rectified-flow-pytorch | 1.17x | 3.13x | 3.12x |
-| pytorch-ddpm | 1.29x | 2.54x | 2.28x |
-| pytorch-yolov3 | 2.07x | 2.10x | 2.28x |
+| detr | 1.00x | 1.00x | 1.06x |
+| efficient-kan | 3.40x | 3.58x | 4.30x |
+| ganilla | 1.00x | 1.34x | 1.13x |
+| jointbert | 2.65x | 2.72x | 2.20x |
+| nerf-pytorch | 1.18x | 2.43x | 1.30x |
 | pointnet2 | 1.65x | 4.89x | 2.61x |
+| pytorch-ddpm | 1.29x | 2.54x | 2.28x |
+| pytorch-gan-dcgan | 2.03x | 2.15x | 2.10x |
+| pytorch-wgan | 1.18x | 1.41x | 2.17x |
+| pytorch-yolov3 | 2.07x | 2.10x | 2.28x |
+| rectified-flow-pytorch | 1.17x | 3.13x | 3.12x |
+| simclr | 2.06x | 2.39x | 2.44x |
+| transfusion-pytorch | 1.00x | 1.58x | 1.55x |
+| vit-pytorch | 1.37x | 2.43x | 1.74x |
+| x-transformers | 1.00x | 5.52x | 4.13x |
+| **Geometric mean** | **1.48x** | **2.36x** | **2.12x** |
 
-gpt-6.1-sol got torch.compile working on all three of the first repos and turned on
-x-transformers' flash attention, which gpt-6-luna never did; it matched or beat the
-hand fix there. On PyTorch-YOLOv3 the winning fixes were standard ones (bf16, and
-keeping DataLoader workers alive across the 8-step epochs), and both models found
-them. The 23 host-device syncs per step in its loss code, which the profiler traced
-to their lines, turned out to cost nothing measurable: removing them on their own
-measured 1.01x.
+gpt-6.1-sol was faster than gpt-6-luna on 14 of the 15 repos, by more than 10% on 10
+of them, and tied on DETR. Most of the gap is torch.compile: gpt-6.1-sol got it
+working on 9 repos, gpt-6-luna on 2. gpt-6.1-sol also kept bf16 on 8 repos to
+gpt-6-luna's 4, and made three changes gpt-6-luna never tried: switching on
+x-transformers' existing flash attention option, replacing vit-pytorch's hand-written
+attention with PyTorch's fused `scaled_dot_product_attention`, and a Triton kernel
+for PointNet++ (below).
+
+Against the hand fix, gpt-6.1-sol was ahead by more than 3% on 7 repos, within 3% on
+4 and behind on 4. The biggest hand-fix win was a change neither model tried: bf16
+for both networks of pytorch-wgan, whose gradient penalty takes a second backward
+pass. With it the hand fix measured 2.17x; the same hand fix without bf16 measured
+1.38x, close to gpt-6.1-sol's 1.41x. On PyTorch-YOLOv3 both models found the winning
+fixes (bf16, and keeping DataLoader workers alive across the 8-step epochs). The 23
+host-device syncs per step in its loss code, which the profiler traced to their
+lines, cost nothing measurable: removing them on their own measured 1.01x.
 
 PointNet++ was the hardest. Its farthest point sampling is a Python loop of 640
 steps per forward pass, and a masked update inside it (`distance[mask] = dist[mask]`)
@@ -136,7 +157,23 @@ bf16 for the convolutions. The kernel picks exactly the points the original loop
 picks (identical in 40 of 40 test runs on a GPU, including inputs with many ties).
 The hand fix replayed the loop from a CUDA graph instead and reached 2.61x.
 
-Each gpt-6.1-sol run cost $0.44 to $0.76 of API credit.
+DETR resisted everyone. At batch size 2, Python overhead per op sets the pace;
+neither model kept a change, and the best of three hand attempts measured 1.06x.
+
+- **Lost reports:** on pytorch-ddpm and rectified-flow-pytorch, the monthly GPU
+  budget guard stopped the gpt-6.1-sol run's final measurement before it wrote a
+  report. Their numbers come from measuring the kept changes against the original
+  again, in pairs (`results/final-pairs/`).
+- **Late hand fixes:** for efficient-kan, PyTorch-GAN and pytorch-wgan the hand fix
+  was at first only the one-line DataLoader fix from the go/no-go check. The full
+  hand fixes in the table came after the agent runs, with their reports at hand; the
+  pytorch-wgan one borrows gpt-6.1-sol's idea of skipping the generator's gradients
+  in critic steps.
+- **Cost:** a gpt-6.1-sol run cost $0.05 to $0.09 of API credit, priced from the
+  token usage the API reported, cache discount included
+  (`results/checks/llm_spend.txt`). The first six gpt-6.1-sol runs saved no
+  cached-token counts, so the four of them with reports price every prompt token
+  at the full rate ($0.44 to $0.76 each).
 
 ### Planted test suite
 
@@ -267,8 +304,10 @@ motivated the project (`results/survey/`).
   nerf-pytorch's loss varies about 2x between seeds, so its bolder blind patches
   (the whole render in bf16) passed a check that can't say much.
 - The agent tries one change per round and keeps only measured wins, so it is
-  cautious. It rarely attempts the bigger changes that won most in the hand fixes,
-  such as switching on flash attention or compiling a library's code.
+  cautious. With gpt-6-luna it rarely attempted the bigger changes that won most in
+  the hand fixes, such as switching on flash attention or compiling a library's
+  code; gpt-6.1-sol did, but neither model tried bf16 on a GAN with a gradient
+  penalty.
 
 ## What didn't work
 
