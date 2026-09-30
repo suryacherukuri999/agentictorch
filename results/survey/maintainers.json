@@ -349,6 +349,33 @@
      "title": "fix query_ball_point"
     }
    ]
+  },
+  {
+   "repo": "facebookresearch/detr",
+   "stars": 15352,
+   "last_outside_merge": "2023-02-07",
+   "outside_merges_6_months": 0,
+   "outside_merges_12_months": 0,
+   "latest": [
+    {
+     "number": 565,
+     "merged": "2023-02-07",
+     "author": "alcinos",
+     "title": "Add link to blogpost"
+    },
+    {
+     "number": 490,
+     "merged": "2022-03-07",
+     "author": "dmitryvinn",
+     "title": "docs: add GH button in support of Ukraine"
+    },
+    {
+     "number": 454,
+     "merged": "2021-10-18",
+     "author": "NaelsonDouglas",
+     "title": "Removed a manual indexer iterator pitfall"
+    }
+   ]
   }
  ]
 }
