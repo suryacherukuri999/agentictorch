@@ -24,6 +24,9 @@ MAIN_MODEL = MODELS["gpt-6-luna"].name
 LOCAL_MODEL = MODELS["ornith-9b"].name
 # A blind patch that runs this much slower than the original counts as harmful.
 HARM_MARGIN = 0.97
+# Who made the reference fixes in results/hand: the model editing each repo itself, with
+# the profiler and paired benchmark but outside the agent loop.
+DIRECT = "Reference model, direct"
 
 
 def planted_cost(target: str) -> float | None:
@@ -174,8 +177,7 @@ def versus() -> str:
     agents = latest("agent", MAIN_MODEL)
     labels = {t: r["change"] for t, r in headline_records().items()}
     lines = [
-        "| Repo | GPU | Original (ms/step) | Agent | Agent's changes | Hand fix "
-        "| Hand fix's changes |",
+        f"| Repo | GPU | Original (ms/step) | Agent | Agent's changes | {DIRECT} | Its changes |",
         "|---" * 7 + "|",
     ]
     for target in sorted(set(agents) & set(hands), key=lambda t: -hands[t]["speedup"]):
@@ -202,23 +204,41 @@ def shipped(record: dict) -> float:
     return record["speedup"] if kept else 1.0
 
 
-def three_way() -> str:
-    """Per repo: the agent with the cheap and the stronger model and the fastest hand fix,
-    each against the original on an L4, and their geometric means over the repos all
-    three ran. A stronger-model run whose report was lost keeps its later final pair."""
+def compare_models() -> str:
+    """Per repo, each against the original on an L4: the agent with the cheap and the
+    stronger model, the stronger model's one blind patch, and the direct fix; then the
+    geometric means and harmful changes shipped over the repos all four ran. A
+    stronger-model agent run whose report was lost keeps its later final pair."""
+    sol_model = MODELS["gpt-6.1-sol"].name
     luna = latest("agent", MAIN_MODEL)
-    sol = latest("agent", MODELS["gpt-6.1-sol"].name)
+    sol = latest("agent", sol_model)
     for path in (RESULTS / "final-pairs").glob("*.json"):
         record = json.loads(path.read_text())
         sol.setdefault(record["target"], record)
-    hands = hand_fixes()
-    targets = sorted(t for t in set(luna) & set(sol) & set(hands) if not t.startswith("bench-"))
-    rows = [(t, shipped(luna[t]), shipped(sol[t]), shipped(hands[t])) for t in targets]
-    lines = ["| Repo | gpt-6-luna | gpt-6.1-sol | Hand fix |", "|---|---|---|---|"]
-    lines += [f"| {t} | {a:.2f}x | {b:.2f}x | {c:.2f}x |" for t, a, b, c in rows]
-    if rows:
-        means = [geometric_mean(r[i] for r in rows) for i in (1, 2, 3)]
-        lines.append("| **Geometric mean** | " + " | ".join(f"**{m:.2f}x**" for m in means) + " |")
+    patches = latest("llm", sol_model)
+    direct = hand_fixes()
+    targets = sorted(
+        t for t in set(luna) & set(sol) & set(patches) & set(direct) if not t.startswith("bench-")
+    )
+    lines = [
+        f"| Repo | Agent, gpt-6-luna | Agent, gpt-6.1-sol | One patch, gpt-6.1-sol | {DIRECT} |",
+        "|---|---|---|---|---|",
+    ]
+    columns, harmful = [[], [], [], []], 0
+    for target in targets:
+        patch, harm = outcome(patches[target], "llm")
+        harmful += harm
+        row = [shipped(luna[target]), shipped(sol[target]), patch, shipped(direct[target])]
+        for column, speedup in zip(columns, row, strict=True):
+            column.append(speedup)
+        cells = [f"{s:.2f}x" for s in row]
+        cells[2] += " harmful" if harm else ""
+        lines.append(f"| {target} | " + " | ".join(cells) + " |")
+    if targets:
+        means = " | ".join(f"**{geometric_mean(c):.2f}x**" for c in columns)
+        lines.append(f"| **Geometric mean** | {means} |")
+        # Only the blind patch can ship harm: the others keep measured wins only.
+        lines.append(f"| Harmful changes shipped | 0 | 0 | {harmful} | 0 |")
     return "\n".join(lines)
 
 
@@ -314,4 +334,4 @@ if __name__ == "__main__":
     print()
     print(versus())
     print()
-    print(three_way())
+    print(compare_models())

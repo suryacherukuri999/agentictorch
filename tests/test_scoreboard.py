@@ -144,7 +144,7 @@ def test_versus_compares_the_agent_with_the_fastest_hand_fix(tmp_path, monkeypat
     assert row == "| ddpm | L4 | 550.0 | 1.29x | 1 changes | 2.28x | hand/ddpm-hand |"
 
 
-def test_three_way_uses_final_pairs_for_lost_reports_and_averages(tmp_path, monkeypatch):
+def test_compare_models_counts_harmful_blind_patches_and_averages(tmp_path, monkeypatch):
     import json
 
     from hotloop import scoreboard
@@ -165,9 +165,17 @@ def test_three_way_uses_final_pairs_for_lost_reports_and_averages(tmp_path, monk
         )
     save(tmp_path / "eval/agent/nerf/agent-gpt-6.1-sol-20261025-020000.json",
          {"target": "nerf", "model": sol, "speedup": 1.0, "kept": [], "attempts": []})  # fmt: skip
+    crash = {"change": "x", "keep": False, "reason": "run failed: SyntaxError"}
+    save(tmp_path / "eval/llm/ddpm/llm-gpt-6.1-sol-20261025-030000.json",
+         {"target": "ddpm", "model": sol, "measured_speedup": None, "speedup": 1.0,
+          "attempts": [crash]})  # fmt: skip
+    save(tmp_path / "eval/llm/nerf/llm-gpt-6.1-sol-20261025-030000.json",
+         {"target": "nerf", "model": sol, "measured_speedup": 1.5, "speedup": 1.5,
+          "attempts": [{"change": "x", "keep": True, "reason": "1.50x faster"}]})  # fmt: skip
     monkeypatch.setattr(scoreboard, "RESULTS", tmp_path)
 
-    lines = scoreboard.three_way().splitlines()
-    assert lines[2] == "| ddpm | 1.29x | 2.54x | 2.00x |"
-    assert lines[3] == "| nerf | 1.18x | 1.00x | 2.00x |"
-    assert lines[4].startswith("| **Geometric mean** | **1.23x** | **1.59x** | **2.00x** |")
+    lines = scoreboard.compare_models().splitlines()
+    assert lines[2] == "| ddpm | 1.29x | 2.54x | 1.00x harmful | 2.00x |"
+    assert lines[3] == "| nerf | 1.18x | 1.00x | 1.50x | 2.00x |"
+    assert lines[4] == "| **Geometric mean** | **1.23x** | **1.59x** | **1.22x** | **2.00x** |"
+    assert lines[5] == "| Harmful changes shipped | 0 | 0 | 1 | 0 |"
