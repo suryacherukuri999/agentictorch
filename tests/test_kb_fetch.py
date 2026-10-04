@@ -1,4 +1,4 @@
-from hotloop.kb.fetch import sections
+from agentictorch.kb.fetch import sections
 
 PYTORCH_PAGE = """
 <html><body><nav>Table of contents that should be skipped</nav>

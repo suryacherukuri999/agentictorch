@@ -1,6 +1,6 @@
 import pytest
 
-from hotloop.bench import cases, planted_source, target
+from agentictorch.bench import cases, planted_source, target
 
 
 @pytest.mark.parametrize("case", cases(), ids=lambda c: c.name)

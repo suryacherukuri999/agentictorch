@@ -2,9 +2,9 @@
 
 import json
 
-from hotloop.agent.session import Session
-from hotloop.tools import files
-from hotloop.tools.files import ToolError
+from agentictorch.agent.session import Session
+from agentictorch.tools import files
+from agentictorch.tools.files import ToolError
 
 MAX_PROFILES = 2
 MAX_CHECKS = 5
@@ -132,7 +132,7 @@ class Toolbox:
 
     def _search_docs(self, query: str) -> str:
         if self.index is None:
-            from hotloop.kb.search import Index
+            from agentictorch.kb.search import Index
 
             self.index = Index()
         out = []

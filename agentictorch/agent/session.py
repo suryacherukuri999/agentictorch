@@ -13,13 +13,13 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from hotloop import workspace
-from hotloop.agent.keep import Verdict, decide
-from hotloop.harness import modal_runner
-from hotloop.harness.modal_runner import Job
-from hotloop.measurement import Measurement
-from hotloop.targets import Target
-from hotloop.tools.files import ToolError
+from agentictorch import workspace
+from agentictorch.agent.keep import Verdict, decide
+from agentictorch.harness import modal_runner
+from agentictorch.harness.modal_runner import Job
+from agentictorch.measurement import Measurement
+from agentictorch.targets import Target
+from agentictorch.tools.files import ToolError
 
 # A quick check runs this many steps: enough to get through start-up and a few
 # optimizer steps, far too few to say anything about speed.
@@ -117,7 +117,7 @@ class Session:
         if verdict.keep:
             self._git("add", "--all")
             self._git(
-                "-c", "user.name=hotloop", "-c", "user.email=hotloop@localhost",
+                "-c", "user.name=agentictorch", "-c", "user.email=agentictorch@localhost",
                 "commit", "--quiet", "-m", description,
             )  # fmt: skip
         else:
@@ -163,7 +163,7 @@ class Session:
     @contextlib.contextmanager
     def _exported(self, rev: str):
         """A temporary copy of the working copy at `rev`, for upload."""
-        with tempfile.TemporaryDirectory(prefix="hotloop-export-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="agentictorch-export-") as tmp:
             copy = Path(tmp) / "repo"
             shutil.copytree(self.repo, copy, symlinks=True)
             subprocess.run(["git", "-C", str(copy), "reset", "--quiet", "--hard", rev], check=True)

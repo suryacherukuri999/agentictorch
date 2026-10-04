@@ -14,7 +14,7 @@ import math
 from dataclasses import dataclass
 from statistics import geometric_mean, mean
 
-from hotloop.measurement import Measurement
+from agentictorch.measurement import Measurement
 
 # Smaller gains aren't worth a change to someone's repo, even when they beat the noise.
 MIN_GAIN = 0.03

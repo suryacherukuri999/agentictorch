@@ -1,7 +1,7 @@
 import subprocess
 
-from hotloop import targets, workspace
-from hotloop.targets import Target
+from agentictorch import targets, workspace
+from agentictorch.targets import Target
 
 
 def git(repo, *args):

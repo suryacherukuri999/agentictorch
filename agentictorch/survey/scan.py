@@ -4,7 +4,7 @@ import ast
 import warnings
 from pathlib import Path
 
-from hotloop.survey.detect import Findings, argparse_defaults, scan_python, scan_text
+from agentictorch.survey.detect import Findings, argparse_defaults, scan_python, scan_text
 
 TEXT_SUFFIXES = {".sh", ".yaml", ".yml", ".json", ".cfg", ".toml", ".ini", ".md"}
 TEST_DIRS = {"test", "tests", "testing"}

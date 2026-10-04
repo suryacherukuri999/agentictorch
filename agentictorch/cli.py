@@ -7,9 +7,9 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-from hotloop import bench, targets, workspace
-from hotloop.agent.keep import decide
-from hotloop.measurement import Measurement, tail_loss
+from agentictorch import bench, targets, workspace
+from agentictorch.agent.keep import decide
+from agentictorch.measurement import Measurement, tail_loss
 
 RESULTS = Path(__file__).parent.parent / "results"
 
@@ -55,13 +55,13 @@ def cmd_clone(args) -> None:
 
 
 def cmd_download(args) -> None:
-    from hotloop.harness import modal_runner
+    from agentictorch.harness import modal_runner
 
     print(modal_runner.download(load_target(args.target)))
 
 
 def cmd_measure(args) -> None:
-    from hotloop.harness import modal_runner
+    from agentictorch.harness import modal_runner
 
     target = load_target(args.target)
     repo = working_copy(target, args.label)
@@ -80,7 +80,7 @@ def cmd_measure(args) -> None:
 
 
 def cmd_profile(args) -> None:
-    from hotloop.harness import modal_runner
+    from agentictorch.harness import modal_runner
 
     target = load_target(args.target)
     repo = working_copy(target, args.label)
@@ -100,7 +100,7 @@ def cmd_profile(args) -> None:
 
 
 def cmd_ab(args) -> None:
-    from hotloop.harness import modal_runner
+    from agentictorch.harness import modal_runner
 
     target = load_target(args.target)
     base_runs, cand_runs = modal_runner.ab(
@@ -122,9 +122,9 @@ def cmd_ab(args) -> None:
 
 
 def cmd_run(args) -> None:
-    from hotloop.agent import loop, report, rules
-    from hotloop.agent.models import MODELS
-    from hotloop.agent.session import Session
+    from agentictorch.agent import loop, report, rules
+    from agentictorch.agent.models import MODELS
+    from agentictorch.agent.session import Session
 
     target = load_target(args.target)
     who = "rules" if args.setup == "rules" else args.model
@@ -199,7 +199,7 @@ def cmd_record(args) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="hotloop")
+    parser = argparse.ArgumentParser(prog="agentictorch")
     sub = parser.add_subparsers(required=True)
 
     p = sub.add_parser("clone", help="make a working copy of a target repo")

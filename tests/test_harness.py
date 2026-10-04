@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from hotloop.harness import runner
-from hotloop.profile import summary
+from agentictorch.harness import runner
+from agentictorch.profile import summary
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -96,7 +96,7 @@ def test_measures_time_spent_waiting_for_data():
 
 
 def test_harness_is_inactive_without_an_output_path():
-    env = {k: v for k, v in os.environ.items() if not k.startswith("HOTLOOP_")}
+    env = {k: v for k, v in os.environ.items() if not k.startswith("AGENTICTORCH_")}
     env["PYTHONPATH"] = str(runner.INJECT_DIR)
     out = subprocess.run(
         [sys.executable, "tiny_train.py", "--epochs", "1"],

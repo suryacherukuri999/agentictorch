@@ -3,8 +3,8 @@
 import json
 from pathlib import Path
 
-from hotloop.agent.loop import Run
-from hotloop.measurement import Measurement
+from agentictorch.agent.loop import Run
+from agentictorch.measurement import Measurement
 
 
 def _speed(m: Measurement) -> str:
@@ -22,7 +22,7 @@ def _baseline(run: Run) -> Measurement | None:
 def markdown(run: Run) -> str:
     s = run.session
     base = _baseline(run)
-    lines = [f"# Hotloop report: {s.target.name}", ""]
+    lines = [f"# AgenticTorch report: {s.target.name}", ""]
     if run.final and run.final.verdict.keep:
         lines.append(f"**Result: {run.final.verdict.reason}** on an {run.final.baseline.gpu}.")
     else:

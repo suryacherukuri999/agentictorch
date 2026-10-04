@@ -7,7 +7,7 @@ APIs, so these few AST rules stand in for a rule-based fixer.
 import ast
 from pathlib import Path
 
-from hotloop.survey.detect import _enclosing_loop, _is_backward, _is_training_loader
+from agentictorch.survey.detect import _enclosing_loop, _is_backward, _is_training_loader
 
 WORKERS = 4
 

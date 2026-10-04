@@ -1,4 +1,4 @@
-from hotloop.measurement import Measurement
+from agentictorch.measurement import Measurement
 
 TRACEBACK = "\n".join(
     [f"step {i}" for i in range(20)]

@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-WORK = Path.home() / "hotloop-work"
+WORK = Path.home() / "agentictorch-work"
 CACHE = WORK / "llm-cache"
 LEDGER = WORK / "llm-costs.jsonl"
 KEYS = WORK / ".env"
@@ -107,7 +107,7 @@ def paid_spend() -> float:
 
 
 def api_key(name: str) -> str | None:
-    """Read a key from the environment or ~/hotloop-work/.env, never from the repo."""
+    """Read a key from the environment or ~/agentictorch-work/.env, never from the repo."""
     if os.environ.get(name):
         return os.environ[name]
     if KEYS.exists():

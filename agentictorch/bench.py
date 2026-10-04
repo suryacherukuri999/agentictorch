@@ -9,8 +9,8 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-from hotloop.targets import Target, parse
-from hotloop.workspace import WORK
+from agentictorch.targets import Target, parse
+from agentictorch.workspace import WORK
 
 BENCH = Path(__file__).parent.parent / "bench"
 
@@ -79,8 +79,8 @@ def working_copy(case: Case, label: str) -> Path:
     for args in (
         ["init", "--quiet"],
         ["add", "train.py"],
-        ["-c", "user.name=hotloop", "-c", "user.email=hotloop@localhost", "commit", "--quiet",
-         "-m", f"planted: {case.mistake or 'clean control'}"],
+        ["-c", "user.name=agentictorch", "-c", "user.email=agentictorch@localhost",
+         "commit", "--quiet", "-m", f"planted: {case.mistake or 'clean control'}"],
     ):  # fmt: skip
         subprocess.run(["git", "-C", str(dest), *args], check=True)
     return dest

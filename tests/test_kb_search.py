@@ -1,4 +1,4 @@
-from hotloop.kb.search import BM25, Chunk, Hit, best_per_url, chunk_section, fuse, tokenize
+from agentictorch.kb.search import BM25, Chunk, Hit, best_per_url, chunk_section, fuse, tokenize
 
 
 def test_tokenize_keeps_identifiers_whole_and_in_parts():

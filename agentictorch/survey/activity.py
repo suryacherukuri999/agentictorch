@@ -1,6 +1,6 @@
 """Does a repo's maintainer merge pull requests from other people?
 
-python -m hotloop.survey.activity [--save results/survey/maintainers.json] owner/repo ...
+python -m agentictorch.survey.activity [--save results/survey/maintainers.json] owner/repo ...
 
 Pull requests only go to repos that do. Read-only GitHub API calls with no login,
 two per repo (the unauthenticated limit is 60 an hour).

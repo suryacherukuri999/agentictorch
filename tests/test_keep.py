@@ -2,8 +2,8 @@ import math
 
 import pytest
 
-from hotloop.agent.keep import decide
-from hotloop.measurement import Measurement, tail_loss
+from agentictorch.agent.keep import decide
+from agentictorch.measurement import Measurement, tail_loss
 
 
 def run(step_ms=100.0, loss=1.0, seed=0, gpu="NVIDIA L4", **extra):

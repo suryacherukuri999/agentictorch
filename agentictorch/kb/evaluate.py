@@ -1,9 +1,9 @@
 """Retrieval check: does each symptom query find the section that explains its fix?
 
-python -m hotloop.kb.evaluate
+python -m agentictorch.kb.evaluate
 """
 
-from hotloop.kb.search import Index
+from agentictorch.kb.search import Index
 
 # (query as the agent might phrase it, words that must appear in "source: heading" of a hit)
 QUERIES = [

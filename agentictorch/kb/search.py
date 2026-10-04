@@ -1,6 +1,6 @@
 """Hybrid search over the knowledge base: BM25 and embeddings, fused, then reranked.
 
-Build the index once after fetching: python -m hotloop.kb.search build
+Build the index once after fetching: python -m agentictorch.kb.search build
 Both models are small and run locally, so search costs nothing.
 """
 
@@ -14,10 +14,10 @@ from functools import cached_property
 
 import numpy as np
 
-from hotloop.kb.fetch import KB
+from agentictorch.kb.fetch import KB
 
 EMBEDDER = "BAAI/bge-small-en-v1.5"
-# Chosen with hotloop.kb.evaluate: 14/15 symptom queries found in the top 4, against
+# Chosen with agentictorch.kb.evaluate: 14/15 symptom queries found in the top 4, against
 # 13/15 for ms-marco-MiniLM-L6-v2, for about 0.5 s more per query.
 RERANKER = "BAAI/bge-reranker-base"
 # BGE models embed queries with this prefix and passages without one.

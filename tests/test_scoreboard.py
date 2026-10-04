@@ -1,6 +1,6 @@
 import pytest
 
-from hotloop.scoreboard import harmful_attempt, outcome, recovered
+from agentictorch.scoreboard import harmful_attempt, outcome, recovered
 
 
 def record(reason=None, measured=None, speedup=1.0):
@@ -52,7 +52,7 @@ def headline_record(target, recorded, speedup, keep=True, reason="1.50x faster, 
 def test_headline_table_uses_the_latest_run_per_repo(tmp_path, monkeypatch):
     import json
 
-    from hotloop import scoreboard
+    from agentictorch import scoreboard
 
     (tmp_path / "survey").mkdir()
     (tmp_path / "survey" / "repos.csv").write_text("repo,stars\nsomeone/ddpm,1234\n")
@@ -79,7 +79,7 @@ def test_headline_table_uses_the_latest_run_per_repo(tmp_path, monkeypatch):
 def test_headline_table_lists_repos_where_the_agent_kept_nothing(tmp_path, monkeypatch):
     import json
 
-    from hotloop import scoreboard
+    from agentictorch import scoreboard
 
     (tmp_path / "survey").mkdir()
     (tmp_path / "survey" / "repos.csv").write_text("repo,stars\n")
@@ -100,7 +100,7 @@ def test_headline_table_lists_repos_where_the_agent_kept_nothing(tmp_path, monke
 def test_runs_are_ordered_by_time_and_kept_apart_by_model(tmp_path, monkeypatch):
     import json
 
-    from hotloop import scoreboard
+    from agentictorch import scoreboard
 
     folder = tmp_path / "eval" / "agent" / "ddpm"
     folder.mkdir(parents=True)
@@ -122,7 +122,7 @@ def test_runs_are_ordered_by_time_and_kept_apart_by_model(tmp_path, monkeypatch)
 def test_versus_compares_the_agent_with_the_fastest_hand_fix(tmp_path, monkeypatch):
     import json
 
-    from hotloop import scoreboard
+    from agentictorch import scoreboard
 
     l4 = "NVIDIA L4"
     (tmp_path / "headline").mkdir()
@@ -147,7 +147,7 @@ def test_versus_compares_the_agent_with_the_fastest_hand_fix(tmp_path, monkeypat
 def test_compare_models_counts_harmful_blind_patches_and_averages(tmp_path, monkeypatch):
     import json
 
-    from hotloop import scoreboard
+    from agentictorch import scoreboard
 
     def save(path, record):
         path.parent.mkdir(parents=True, exist_ok=True)

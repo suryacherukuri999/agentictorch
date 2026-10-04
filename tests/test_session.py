@@ -2,10 +2,10 @@ import subprocess
 
 import pytest
 
-from hotloop.agent import session as session_module
-from hotloop.agent.session import Session
-from hotloop.targets import Target
-from hotloop.tools.files import ToolError, apply_edit
+from agentictorch.agent import session as session_module
+from agentictorch.agent.session import Session
+from agentictorch.targets import Target
+from agentictorch.tools.files import ToolError, apply_edit
 
 
 def fake_run(repo, seed, container):

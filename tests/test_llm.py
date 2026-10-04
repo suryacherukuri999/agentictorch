@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from hotloop.agent import llm
+from agentictorch.agent import llm
 
 PAID = llm.Model("cheap-model", "https://api.example.com/v1", "EXAMPLE_KEY", 0.5, 2.0)
 FREE = llm.Model("local", "http://localhost:11434/v1")

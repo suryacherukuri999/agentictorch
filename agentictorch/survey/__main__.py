@@ -1,4 +1,4 @@
-"""Rebuild the survey: python -m hotloop.survey [--pinned results/survey/repos.csv]
+"""Rebuild the survey: python -m agentictorch.survey [--pinned results/survey/repos.csv]
 
 Without --pinned it searches GitHub and scans each repo's default branch.
 With --pinned it rescans the exact repos and commits of an earlier run.
@@ -10,10 +10,10 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 
-from hotloop.survey import github, report
-from hotloop.survey.scan import scan_repo
+from agentictorch.survey import github, report
+from agentictorch.survey.scan import scan_repo
 
-CLONES = Path.home() / "hotloop-work" / "survey"
+CLONES = Path.home() / "agentictorch-work" / "survey"
 RESULTS = Path(__file__).parent.parent.parent / "results" / "survey"
 
 
@@ -53,7 +53,7 @@ def scan_one(repo: dict) -> dict | None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="python -m hotloop.survey")
+    parser = argparse.ArgumentParser(prog="python -m agentictorch.survey")
     parser.add_argument("--pinned", type=Path, help="rescan the repos and commits in this CSV")
     args = parser.parse_args(argv)
 

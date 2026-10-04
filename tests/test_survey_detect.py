@@ -3,7 +3,7 @@ from textwrap import dedent
 
 import pytest
 
-from hotloop.survey.detect import argparse_defaults, scan_python, scan_text
+from agentictorch.survey.detect import argparse_defaults, scan_python, scan_text
 
 
 def scan(source: str):

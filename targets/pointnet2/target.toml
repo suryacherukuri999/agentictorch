@@ -4,7 +4,7 @@
 # point sampling written as a Python loop, not in the training loop.
 repo = "https://github.com/yanx27/Pointnet_Pointnet2_pytorch"
 commit = "eb64fe0b4c24055559cea26299cb485dcb43d8dd"
-command = "tar xf data/modelnet40_normal_resampled/subset.tar -C data/modelnet40_normal_resampled && python train_classification.py --model pointnet2_cls_ssg --log_dir hotloop"
+command = "tar xf data/modelnet40_normal_resampled/subset.tar -C data/modelnet40_normal_resampled && python train_classification.py --model pointnet2_cls_ssg --log_dir agentictorch"
 
 [image]
 pip = ["tqdm", "scipy"]

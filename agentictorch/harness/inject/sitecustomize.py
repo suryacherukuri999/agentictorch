@@ -1,8 +1,8 @@
 """Measurement harness that Python loads at startup from PYTHONPATH.
 
-It does nothing unless HOTLOOP_OUT is set. Then, once torch is imported, it:
+It does nothing unless AGENTICTORCH_OUT is set. Then, once torch is imported, it:
 
-- seeds Python, numpy and torch with HOTLOOP_SEED, and shifts the repo's own
+- seeds Python, numpy and torch with AGENTICTORCH_SEED, and shifts the repo's own
   seed calls by the same amount, so runs with different seeds differ but each
   seed repeats its data order;
 - counts steps of the first optimizer that steps (the clock), so a GAN that
@@ -10,11 +10,11 @@ It does nothing unless HOTLOOP_OUT is set. Then, once torch is imported, it:
 - keeps each step's loss as a detached tensor and reads them all at the end,
   so it never adds a host-device sync to a step;
 - syncs CUDA only at the start and end of the measured window;
-- after HOTLOOP_WARMUP + HOTLOOP_STEPS steps, writes JSON to HOTLOOP_OUT and exits.
+- after AGENTICTORCH_WARMUP + AGENTICTORCH_STEPS steps, writes JSON to AGENTICTORCH_OUT and exits.
 
-With HOTLOOP_PROFILE set to a directory, it also runs the PyTorch profiler over
+With AGENTICTORCH_PROFILE set to a directory, it also runs the PyTorch profiler over
 the measured steps and saves the trace and per-op table there, with the repo
-line behind each op and each host-device sync (HOTLOOP_REPO is the repo root).
+line behind each op and each host-device sync (AGENTICTORCH_REPO is the repo root).
 The profiler slows training, so step times from those runs are only for diagnosis.
 
 This file runs inside the target's environment, so it uses only the standard
@@ -38,17 +38,17 @@ import traceback
 import warnings
 
 SYNC_WARNING = "called a synchronizing CUDA operation"
-LINE_TAG = "hotloop:line:"
+LINE_TAG = "agentictorch:line:"
 
 
 class _State:
     def __init__(self) -> None:
-        self.out = os.environ["HOTLOOP_OUT"]
-        self.warmup = max(1, int(os.environ.get("HOTLOOP_WARMUP", "10")))
-        self.steps = int(os.environ.get("HOTLOOP_STEPS", "50"))
-        self.seed = int(os.environ.get("HOTLOOP_SEED", "0"))
-        self.profile_dir = os.environ.get("HOTLOOP_PROFILE")
-        self.repo = os.path.realpath(os.environ.get("HOTLOOP_REPO") or os.getcwd())
+        self.out = os.environ["AGENTICTORCH_OUT"]
+        self.warmup = max(1, int(os.environ.get("AGENTICTORCH_WARMUP", "10")))
+        self.steps = int(os.environ.get("AGENTICTORCH_STEPS", "50"))
+        self.seed = int(os.environ.get("AGENTICTORCH_SEED", "0"))
+        self.profile_dir = os.environ.get("AGENTICTORCH_PROFILE")
+        self.repo = os.path.realpath(os.environ.get("AGENTICTORCH_REPO") or os.getcwd())
         self.profiler = None
         self.lines = None  # the torch function mode that tags ops with repo lines
         self.syncs = {}  # repo line -> host-device syncs seen there while profiling
@@ -94,7 +94,7 @@ class _AfterImport(importlib.abc.MetaPathFinder):
             try:
                 self.callback(module)
             except Exception:
-                print("hotloop: harness setup failed", file=sys.stderr)
+                print("agentictorch: harness setup failed", file=sys.stderr)
                 traceback.print_exc()
 
         spec.loader.exec_module = exec_then_callback
@@ -141,7 +141,7 @@ def _on_torch(torch):
     backward = torch.Tensor.backward
 
     def recording_backward(self, *args, **kwargs):
-        if self.numel() == 1 and not getattr(self, "_hotloop_scaled", False):
+        if self.numel() == 1 and not getattr(self, "_agentictorch_scaled", False):
             _state.pending.append(self.detach().clone())
         return backward(self, *args, **kwargs)
 
@@ -155,7 +155,7 @@ def _on_torch(torch):
         scaled = scale(self, outputs)
         if isinstance(outputs, torch.Tensor) and outputs.numel() == 1:
             _state.pending.append(outputs.detach().clone())
-            scaled._hotloop_scaled = True
+            scaled._agentictorch_scaled = True
         return scaled
 
     torch.amp.GradScaler.scale = recording_scale
@@ -479,7 +479,7 @@ def _record_error(exc_type, exc, tb):
     _excepthook(exc_type, exc, tb)
 
 
-if os.environ.get("HOTLOOP_OUT"):
+if os.environ.get("AGENTICTORCH_OUT"):
     _state = _State()
     random.seed(_state.seed)
     if _state.seed:

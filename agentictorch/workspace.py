@@ -11,9 +11,9 @@ import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
-from hotloop.targets import Target
+from agentictorch.targets import Target
 
-WORK = Path.home() / "hotloop-work"
+WORK = Path.home() / "agentictorch-work"
 
 
 def clone(target: Target) -> Path:
@@ -34,8 +34,8 @@ def working_copy(target: Target, label: str) -> Path:
     if target.compat_patch:
         _git(dest, "apply", target.compat_patch)
         _git(dest, "add", "--all")
-        _git(dest, "-c", "user.name=hotloop", "-c", "user.email=hotloop@localhost", "commit",
-             "--quiet", "-m", "compatibility tweaks")  # fmt: skip
+        _git(dest, "-c", "user.name=agentictorch", "-c", "user.email=agentictorch@localhost",
+             "commit", "--quiet", "-m", "compatibility tweaks")  # fmt: skip
     return dest
 
 

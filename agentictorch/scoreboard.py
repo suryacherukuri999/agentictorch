@@ -1,7 +1,7 @@
 """Compare the setups over everything saved in results/eval, and build the README's
 results table from the headline runs in results/headline.
 
-python -m hotloop.scoreboard
+python -m agentictorch.scoreboard
 
 For planted cases, "recovered" is the share of the slowdown the setup won back:
 with t the step time, (t_planted - t_after) / (t_planted - t_clean), from the
@@ -13,8 +13,8 @@ import json
 from pathlib import Path
 from statistics import geometric_mean, mean
 
-from hotloop import targets
-from hotloop.agent.models import MODELS
+from agentictorch import targets
+from agentictorch.agent.models import MODELS
 
 RESULTS = Path(__file__).parent.parent / "results"
 SETUPS = ["rules", "llm", "llm-kb", "agent"]

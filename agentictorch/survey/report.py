@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from hotloop.survey.detect import Findings
+from agentictorch.survey.detect import Findings
 
 FIELDS = [
     "repo",

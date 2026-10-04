@@ -11,7 +11,7 @@ image = (
     .apt_install("git")
     .uv_pip_install("torch==2.14.1", "torchvision==0.29.1", "numpy")
 )
-app = modal.App("hotloop-fpscheck")
+app = modal.App("agentictorch-fpscheck")
 
 CHECK = r"""
 import torch, triton, triton.language as tl

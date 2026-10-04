@@ -6,11 +6,11 @@ __pycache__/
 .ruff_cache/
 dist/
 
-# keys live in ~/hotloop-work/.env; this is a safety net
+# keys live in ~/agentictorch-work/.env; this is a safety net
 .env
 
 # datasets, cloned target repos, profiler traces and raw run outputs
-# belong in ~/hotloop-work, not in this folder
+# belong in ~/agentictorch-work, not in this folder
 data/
 datasets/
 repos/

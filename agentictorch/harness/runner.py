@@ -17,7 +17,7 @@ import time
 from dataclasses import asdict
 from pathlib import Path
 
-from hotloop.profile import summary
+from agentictorch.profile import summary
 
 INJECT_DIR = Path(__file__).parent / "inject"
 
@@ -41,7 +41,7 @@ def run(
     if steps < 1 or warmup < 1:
         raise ValueError("steps and warmup must both be at least 1")
 
-    with tempfile.TemporaryDirectory(prefix="hotloop-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="agentictorch-") as tmp:
         out = Path(tmp) / "result.json"
         log = Path(tmp) / "log.txt"
         profile_dir = Path(tmp) / "profile"
@@ -50,14 +50,14 @@ def run(
             p for p in (str(INJECT_DIR), run_env.get("PYTHONPATH")) if p
         )
         run_env |= {
-            "HOTLOOP_OUT": str(out),
-            "HOTLOOP_STEPS": str(steps),
-            "HOTLOOP_WARMUP": str(warmup),
-            "HOTLOOP_SEED": str(seed),
-            "HOTLOOP_REPO": str(Path(cwd).resolve()),
+            "AGENTICTORCH_OUT": str(out),
+            "AGENTICTORCH_STEPS": str(steps),
+            "AGENTICTORCH_WARMUP": str(warmup),
+            "AGENTICTORCH_SEED": str(seed),
+            "AGENTICTORCH_REPO": str(Path(cwd).resolve()),
         }
         if profile:
-            run_env["HOTLOOP_PROFILE"] = str(profile_dir)
+            run_env["AGENTICTORCH_PROFILE"] = str(profile_dir)
 
         start = time.monotonic()
         with log.open("wb") as log_file:

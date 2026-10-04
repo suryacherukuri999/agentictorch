@@ -1,4 +1,4 @@
-from hotloop.survey.scan import scan_repo
+from agentictorch.survey.scan import scan_repo
 
 
 def test_reads_files_with_a_byte_order_mark(tmp_path):

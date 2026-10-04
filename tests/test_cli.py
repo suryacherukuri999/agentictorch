@@ -1,4 +1,4 @@
-from hotloop import cli
+from agentictorch import cli
 
 
 def test_resolves_real_repos_and_bench_cases(monkeypatch, tmp_path):

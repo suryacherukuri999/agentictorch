@@ -1,4 +1,4 @@
-# Hotloop
+# AgenticTorch
 
 An agent that finds and fixes slow PyTorch training code in real open-source repos.
 It proves every fix by rerunning the training on a GPU: a change is kept only if
@@ -7,7 +7,7 @@ it is faster beyond run-to-run noise and the loss stays the same.
 ## Results
 
 Every number below comes from a run saved in `results/`, and
-`python -m hotloop.scoreboard` rebuilds these tables. Each one compares a repo's
+`python -m agentictorch.scoreboard` rebuilds these tables. Each one compares a repo's
 original code with the changed code in pairs: both run in the same container on the
 same GPU, once per seed (two seeds), for 50 measured steps after 10 warm-up steps.
 
@@ -318,26 +318,26 @@ environment.
 
 ```
 uv sync
-python -m modal setup                    # once
-python -m hotloop.kb.fetch               # download the docs
-python -m hotloop.kb.search build        # build the search index
+python -m modal setup                         # once
+python -m agentictorch.kb.fetch               # download the docs
+python -m agentictorch.kb.search build        # build the search index
 
-hotloop download pytorch-ddpm            # dataset into a Modal volume, once
-hotloop measure pytorch-ddpm             # baseline on an L4, two seeds
-hotloop profile pytorch-ddpm             # profiler summary
-hotloop run pytorch-ddpm --setup agent --model gpt-6-luna
+agentictorch download pytorch-ddpm            # dataset into a Modal volume, once
+agentictorch measure pytorch-ddpm             # baseline on an L4, two seeds
+agentictorch profile pytorch-ddpm             # profiler summary
+agentictorch run pytorch-ddpm --setup agent --model gpt-6-luna
 ```
 
-Models are listed in `hotloop/agent/models.py`; keys are read from the environment
-or `~/hotloop-work/.env`.
+Models are listed in `agentictorch/agent/models.py`; keys are read from the environment
+or `~/agentictorch-work/.env`.
 
 Each target repo is a small config in `targets/<name>/target.toml`: the repo, a
 pinned commit, the training command, extra pip packages and the dataset. `--setup`
 picks what runs: `rules` (a few AST rules), `llm` (the model reads the code and
 patches it once without measuring), `llm-kb` (the same with the docs), or `agent`.
-`python -m hotloop.scoreboard` compares the setups over everything in `results/`.
+`python -m agentictorch.scoreboard` compares the setups over everything in `results/`.
 
-`python -m hotloop.survey` rebuilds the static scan of popular PyTorch repos that
+`python -m agentictorch.survey` rebuilds the static scan of popular PyTorch repos that
 motivated the project (`results/survey/`).
 
 ## Limitations

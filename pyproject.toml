@@ -1,5 +1,5 @@
 [project]
-name = "hotloop"
+name = "agentictorch"
 version = "0.1.0"
 description = "An agent that finds and fixes slow PyTorch training code, and proves each fix by measuring it."
 readme = "README.md"
@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-hotloop = "hotloop.cli:main"
+agentictorch = "agentictorch.cli:main"
 
 [dependency-groups]
 dev = [

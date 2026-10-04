@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from hotloop.harness import modal_runner
-from hotloop.harness.modal_runner import Job
-from hotloop.targets import Target
+from agentictorch.harness import modal_runner
+from agentictorch.harness.modal_runner import Job
+from agentictorch.targets import Target
 
 
 def fake_run(calls):

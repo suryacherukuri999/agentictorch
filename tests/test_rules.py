@@ -1,6 +1,6 @@
 from textwrap import dedent
 
-from hotloop.agent.rules import apply
+from agentictorch.agent.rules import apply
 
 
 def write(tmp_path, source):

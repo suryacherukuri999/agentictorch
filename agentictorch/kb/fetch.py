@@ -1,7 +1,7 @@
 """Download the knowledge base sources and split them into sections with URLs.
 
-The downloaded corpus lives in ~/hotloop-work/kb and is never committed:
-python -m hotloop.kb.fetch
+The downloaded corpus lives in ~/agentictorch-work/kb and is never committed:
+python -m agentictorch.kb.fetch
 """
 
 import html.parser
@@ -13,7 +13,7 @@ import urllib.request
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-KB = Path.home() / "hotloop-work" / "kb"
+KB = Path.home() / "agentictorch-work" / "kb"
 
 DOCS = {
     "PyTorch performance tuning guide": "https://docs.pytorch.org/tutorials/recipes/recipes/tuning_guide.html",
@@ -129,7 +129,7 @@ def issue_sections(issue: dict, comments: list[dict]) -> list[Section]:
 
 
 def _get(url: str) -> bytes:
-    request = urllib.request.Request(url, headers={"User-Agent": "hotloop-kb"})
+    request = urllib.request.Request(url, headers={"User-Agent": "agentictorch-kb"})
     with urllib.request.urlopen(request, timeout=60) as response:
         return response.read()
 

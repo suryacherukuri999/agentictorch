@@ -1,6 +1,6 @@
 import pytest
 
-from hotloop.profile.summary import render, summarize
+from agentictorch.profile.summary import render, summarize
 
 
 def event(cat, name, ts, dur):

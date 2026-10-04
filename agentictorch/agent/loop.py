@@ -8,10 +8,10 @@ only to score it.
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from hotloop.agent import llm
-from hotloop.agent.session import Attempt, Session
-from hotloop.agent.tools import SCHEMAS, Toolbox
-from hotloop.survey.scan import scan_repo
+from agentictorch.agent import llm
+from agentictorch.agent.session import Attempt, Session
+from agentictorch.agent.tools import SCHEMAS, Toolbox
+from agentictorch.survey.scan import scan_repo
 
 SYSTEM = """You make PyTorch training code faster without changing what it computes.
 
@@ -170,7 +170,7 @@ def run(
             result.final = session.final()
     except Exception as e:
         # The report still lists every measured attempt; the final pair can be rerun
-        # from the working copy with `hotloop ab`.
+        # from the working copy with `agentictorch ab`.
         result.stopped = f"the final measurement failed: {type(e).__name__}: {e}"
         log(f"stopped: {result.stopped}")
     return result

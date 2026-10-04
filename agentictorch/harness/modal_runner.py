@@ -21,9 +21,9 @@ from pathlib import Path
 
 import modal
 
-from hotloop import costs
-from hotloop.harness import runner
-from hotloop.targets import Target
+from agentictorch import costs
+from agentictorch.harness import runner
+from agentictorch.targets import Target
 
 # These runs need a few GB of GPU memory; bigger GPUs only spend the credits faster.
 GPUS = ("T4", "L4", "A100-40GB")
@@ -45,7 +45,7 @@ base_image = (
     .apt_install("git")
     .uv_pip_install("torch==2.14.1", "torchvision==0.29.1", "numpy")
 )
-data_volume = modal.Volume.from_name("hotloop-data", create_if_missing=True)
+data_volume = modal.Volume.from_name("agentictorch-data", create_if_missing=True)
 
 
 def image_for(target: Target) -> modal.Image:
@@ -54,7 +54,7 @@ def image_for(target: Target) -> modal.Image:
         image = image.apt_install(*target.apt)
     if target.pip:
         image = image.uv_pip_install(*target.pip)
-    return image.add_local_python_source("hotloop")
+    return image.add_local_python_source("agentictorch")
 
 
 @dataclass(frozen=True)
@@ -161,7 +161,7 @@ def _run(
             ]
         )
 
-    app = modal.App(f"hotloop-{target.name}")
+    app = modal.App(f"agentictorch-{target.name}")
     function = app.function(
         image=image_for(target),
         gpu=gpu,
@@ -217,7 +217,7 @@ def download(target: Target, *, verbose: bool = True) -> str:
     rate = costs.hourly_rate(None, cpu, memory_gib)
     costs.check(planned=rate * timeout / 3600)
 
-    app = modal.App(f"hotloop-{target.name}-data")
+    app = modal.App(f"agentictorch-{target.name}-data")
     function = app.function(
         image=image_for(target),
         cpu=cpu,
