@@ -46,12 +46,15 @@ kept a change, the original and the changed code were measured again on an A100:
 - **Pull requests:** none sent yet. 11 of the 15 repos haven't merged a pull request
   from outside their team in the last 12 months.
 
-### Against a hand fix
+### Against the reference model working directly
 
-The same repos with the usual fixes applied by hand and measured the same way, on an
-L4, as a reference for how much the agent with gpt-6-luna leaves on the table:
+The same repos fixed by the reference model at max effort, editing each repo itself: it
+read the code and the profiles and measured its attempts with the same paired
+benchmark (up to three per repo, each bundling several changes), but outside the
+agent loop. On an L4, as a reference for how much the agent with gpt-6-luna leaves on
+the table:
 
-| Repo | GPU | Original (ms/step) | Agent | Agent's changes | Hand fix | Hand fix's changes |
+| Repo | GPU | Original (ms/step) | Agent | Agent's changes | Reference model, direct | Its changes |
 |---|---|---|---|---|---|---|
 | efficient-kan | L4 | 17.3 | 3.40x | DataLoader workers with pinned memory, torch.compile | 4.30x | loader workers with pinned memory, no per-step syncs, CUDA graphs through torch.compile, fused AdamW |
 | x-transformers | L4 | 707.7 | nothing kept |  | 4.13x | batches built on the CPU and copied once, flash attention, bf16 |
@@ -70,7 +73,7 @@ L4, as a reference for how much the agent with gpt-6-luna leaves on the table:
 | detr | L4 | 195.4 | nothing kept |  | 1.06x | one sync for logging, box checks on the GPU, matcher indices copied once, pinned copies, 8 workers, bf16 forward |
 
 With the standard fixes (mixed precision, DataLoader workers, fused optimizers),
-the agent came within 10% of the hand fix or beat it on JointBERT, PyTorch-GAN,
+the agent came within 10% of the direct fix or beat it on JointBERT, PyTorch-GAN,
 PyTorch-YOLOv3 and nerf-pytorch. It fell far short where the win needed a bigger or
 riskier change, such as flash attention behind a library flag (x-transformers),
 compiling library code (rectified-flow, pytorch-ddpm, transfusion), or bf16 in a GAN
@@ -105,47 +108,93 @@ render in bf16 gave about 2.5x, where the agent kept only TF32. But blind patchi
 also shipped a slowdown on ganilla and a crash on pytorch-ddpm. The agent shipped
 neither, and its keep rule caught three harmful attempts of its own.
 
-### Does the model matter?
+### The model, the loop and a direct fix
 
-Yes. The same agent with gpt-6.1-sol, a stronger model at 20 times the price per
-token, on all 15 repos, next to gpt-6-luna and the hand fix. All on an L4, each
-against the original code, loss within noise; 1.00x means nothing was kept:
+Four ways to fix the same 15 repos, each measured against the original code on an L4;
+1.00x means nothing was kept:
+- **Agent, gpt-6-luna** and **Agent, gpt-6.1-sol:** the full loop, with the small
+  model and with a stronger one at 20 times the price per token.
+- **One patch, gpt-6.1-sol:** the `llm` setup. The stronger model reads the code and
+  writes one patch without running anything, and the patch ships whatever it does.
+- **Reference model, direct:** the reference fixes from the section above.
 
-| Repo | gpt-6-luna | gpt-6.1-sol | Hand fix |
-|---|---|---|---|
-| detr | 1.00x | 1.00x | 1.06x |
-| efficient-kan | 3.40x | 3.58x | 4.30x |
-| ganilla | 1.00x | 1.34x | 1.13x |
-| jointbert | 2.65x | 2.72x | 2.20x |
-| nerf-pytorch | 1.18x | 2.43x | 1.30x |
-| pointnet2 | 1.65x | 4.89x | 2.61x |
-| pytorch-ddpm | 1.29x | 2.54x | 2.28x |
-| pytorch-gan-dcgan | 2.03x | 2.15x | 2.10x |
-| pytorch-wgan | 1.18x | 1.41x | 2.17x |
-| pytorch-yolov3 | 2.07x | 2.10x | 2.28x |
-| rectified-flow-pytorch | 1.17x | 3.13x | 3.12x |
-| simclr | 2.06x | 2.39x | 2.44x |
-| transfusion-pytorch | 1.00x | 1.58x | 1.55x |
-| vit-pytorch | 1.37x | 2.43x | 1.74x |
-| x-transformers | 1.00x | 5.52x | 4.13x |
-| **Geometric mean** | **1.48x** | **2.36x** | **2.12x** |
+| Repo | Agent, gpt-6-luna | Agent, gpt-6.1-sol | One patch, gpt-6.1-sol | Reference model, direct |
+|---|---|---|---|---|
+| detr | 1.00x | 1.00x | 1.00x harmful | 1.06x |
+| efficient-kan | 3.40x | 3.58x | 2.17x | 4.30x |
+| ganilla | 1.00x | 1.34x | 1.54x | 1.13x |
+| jointbert | 2.65x | 2.72x | 3.05x | 2.20x |
+| nerf-pytorch | 1.18x | 2.43x | 2.71x | 1.30x |
+| pointnet2 | 1.65x | 4.89x | 1.93x | 2.61x |
+| pytorch-ddpm | 1.29x | 2.54x | 2.52x | 2.28x |
+| pytorch-gan-dcgan | 2.03x | 2.15x | 1.93x | 2.10x |
+| pytorch-wgan | 1.18x | 1.41x | 1.59x | 2.17x |
+| pytorch-yolov3 | 2.07x | 2.10x | 0.60x harmful | 2.28x |
+| rectified-flow-pytorch | 1.17x | 3.13x | 3.17x | 3.12x |
+| simclr | 2.06x | 2.39x | 2.50x | 2.44x |
+| transfusion-pytorch | 1.00x | 1.58x | 0.86x harmful | 1.55x |
+| vit-pytorch | 1.37x | 2.43x | 1.80x | 1.74x |
+| x-transformers | 1.00x | 5.52x | 5.61x | 4.13x |
+| **Geometric mean** | **1.48x** | **2.36x** | **1.92x** | **2.12x** |
+| Harmful changes shipped | 0 | 0 | 3 | 0 |
 
-gpt-6.1-sol was faster than gpt-6-luna on 14 of the 15 repos, by more than 10% on 10
-of them, and tied on DETR. Most of the gap is torch.compile: gpt-6.1-sol got it
-working on 9 repos, gpt-6-luna on 2. gpt-6.1-sol also kept bf16 on 8 repos to
-gpt-6-luna's 4, and made three changes gpt-6-luna never tried: switching on
-x-transformers' existing flash attention option, replacing vit-pytorch's hand-written
-attention with PyTorch's fused `scaled_dot_product_attention`, and a Triton kernel
-for PointNet++ (below).
+**The loop beat both direct approaches.** With the same model, the agent's geometric
+mean was 2.36x against 1.92x for one blind patch, and it shipped no harm where the
+blind patch shipped three: PyTorch-YOLOv3 at 0.60x (cuDNN autotuning and
+torch.compile, on batch shapes that keep changing), transfusion-pytorch at 0.86x
+(bf16 on a transformer too small to gain from it), and DETR, whose compiled patch
+timed out. Against the reference model working directly, the agent with gpt-6.1-sol was
+ahead by more than 3% on 7 repos, level on 4 and behind on 4 (2.36x against 2.12x),
+though that comparison mixes the method with the model: with gpt-6-luna the agent
+was behind (1.48x).
 
-Against the hand fix, gpt-6.1-sol was ahead by more than 3% on 7 repos, within 3% on
-4 and behind on 4. The biggest hand-fix win was a change neither model tried: bf16
-for both networks of pytorch-wgan, whose gradient penalty takes a second backward
-pass. With it the hand fix measured 2.17x; the same hand fix without bf16 measured
-1.38x, close to gpt-6.1-sol's 1.41x. On PyTorch-YOLOv3 both models found the winning
-fixes (bf16, and keeping DataLoader workers alive across the 8-step epochs). The 23
-host-device syncs per step in its loss code, which the profiler traced to their
-lines, cost nothing measurable: removing them on their own measured 1.01x.
+**Measuring one change at a time leaves gains behind.** The blind patch was ahead of
+the agent on 5 repos, level on 4 and behind on 6. It bundles every change the model
+is confident about, while the agent keeps a change only if it is at least 3% faster
+in every pair on its own, so small gains that only add up together get dropped. On
+nerf-pytorch the agent tried fused Adam and removing the debug-check syncs, measured
+each within noise (1.00x to 1.04x) and reverted them; the blind patch kept them with
+the rest and measured 2.71x against the agent's 2.43x.
+
+**The model sets the ceiling.** gpt-6.1-sol was faster than gpt-6-luna on 14 of the
+15 repos, by more than 10% on 10 of them, and tied on DETR. Most of the gap is
+torch.compile: gpt-6.1-sol got it working on 9 repos, gpt-6-luna on 2, and gpt-6-luna
+never tried it on five others. gpt-6.1-sol also kept bf16 on 8 repos to gpt-6-luna's
+4, used 62 of 65 benchmark rounds in its runs with reports where gpt-6-luna often
+stopped early (53 of 75), and made three changes gpt-6-luna never tried: switching
+on x-transformers' existing flash attention option, replacing vit-pytorch's
+hand-written attention with PyTorch's fused `scaled_dot_product_attention`, and a
+Triton kernel for PointNet++.
+
+#### What gpt-6.1-sol and the reference model each changed
+
+The agent with gpt-6.1-sol against the reference model's direct fix, with gpt-6-luna for
+reference. A number in brackets is that change's own measured gain in its round.
+
+Where the agent with gpt-6.1-sol was faster:
+
+| Repo | gpt-6-luna | gpt-6.1-sol | Reference model | Only gpt-6.1-sol did | Why it won |
+|---|---|---|---|---|---|
+| x-transformers | 1.00x | 5.52x | 4.13x | torch.compile (1.37x), fused Adam (1.03x) | Both had flash attention and bf16; compiling fused the rest |
+| pointnet2 | 1.65x | 4.89x | 2.61x | A Triton kernel for the sampling loop (1.95x), bf16 convolutions (1.66x) | One kernel launch instead of about 4,000 small ones; the direct fix's CUDA graph only removed the CPU's launch cost |
+| vit-pytorch | 1.37x | 2.43x | 1.74x | PyTorch's fused attention in place of the hand-written one (1.27x), compiling with CUDA graphs (1.51x) | The direct fix compiled without CUDA graphs and kept the slow attention |
+| nerf-pytorch | 1.18x | 2.43x | 1.30x | bf16 for the MLP only, rendering kept in float32 (2.06x), torch.compile (1.23x) | The MLP is most of each step; the direct fix used TF32 |
+| pytorch-ddpm | 1.29x | 2.54x | 2.28x | channels_last (1.13x) | Both had bf16 and torch.compile; channels_last speeds up bf16 convolutions |
+| jointbert | 2.65x | 2.72x | 2.20x | Nothing gpt-6-luna lacked | The direct fix skipped torch.compile (1.17x for gpt-6.1-sol) |
+| ganilla | 1.00x | 1.34x | 1.13x | Nothing new: the same compile and pinned copies | The direct fix also turned on cuDNN autotuning and compiled each network's forward instead of the whole module; which detail mattered is untested |
+
+Where the reference model's direct fix was faster:
+
+| Repo | gpt-6-luna | gpt-6.1-sol | Reference model | Only the reference model did | Why it won |
+|---|---|---|---|---|---|
+| pytorch-wgan | 1.18x | 1.41x | 2.17x | bf16 for both networks, outputs cast back to float32 | 1.38x without it; neither agent run tried bf16 |
+| efficient-kan | 3.40x | 3.58x | 4.30x | Removed the progress bar's two syncs per step | Likely because at 4 ms per step each wait shows; untested on its own |
+| pytorch-yolov3 | 2.07x | 2.10x | 2.28x | Fewer syncs in the loss code | Small gap; that change alone measured 1.01x |
+| detr | 1.00x | 1.00x | 1.06x | Six small changes (bf16, pinned copies, fewer syncs and others) | Nothing helps much at batch size 2 |
+
+About equal (within 3%): rectified-flow-pytorch (3.13x against 3.12x),
+transfusion-pytorch (1.58x against 1.55x), SimCLR (2.39x against 2.44x) and
+PyTorch-GAN (2.15x against 2.10x), with the same main changes on both sides.
 
 PointNet++ was the hardest. Its farthest point sampling is a Python loop of 640
 steps per forward pass, and a masked update inside it (`distance[mask] = dist[mask]`)
@@ -155,25 +204,28 @@ it. Only gpt-6.1-sol got past the thousands of tiny kernel launches the loop sti
 made: it wrote a Triton kernel that runs the whole sampling loop at once, then added
 bf16 for the convolutions. The kernel picks exactly the points the original loop
 picks (identical in 40 of 40 test runs on a GPU, including inputs with many ties).
-The hand fix replayed the loop from a CUDA graph instead and reached 2.61x.
+The reference model's direct fix replayed the loop from a CUDA graph instead and reached
+2.61x; one blind patch from gpt-6.1-sol reached 1.93x.
 
 DETR resisted everyone. At batch size 2, Python overhead per op sets the pace;
-neither model kept a change, and the best of three hand attempts measured 1.06x.
+neither agent run kept a change, the blind patch's dynamic-shape compile timed out,
+and the best of three direct attempts measured 1.06x.
 
 - **Lost reports:** on pytorch-ddpm and rectified-flow-pytorch, the monthly GPU
-  budget guard stopped the gpt-6.1-sol run's final measurement before it wrote a
-  report. Their numbers come from measuring the kept changes against the original
+  budget guard stopped the gpt-6.1-sol agent run's final measurement before it wrote
+  a report. Their numbers come from measuring the kept changes against the original
   again, in pairs (`results/final-pairs/`).
-- **Late hand fixes:** for efficient-kan, PyTorch-GAN and pytorch-wgan the hand fix
-  was at first only the one-line DataLoader fix from the go/no-go check. The full
-  hand fixes in the table came after the agent runs, with their reports at hand; the
-  pytorch-wgan one borrows gpt-6.1-sol's idea of skipping the generator's gradients
-  in critic steps.
-- **Cost:** a gpt-6.1-sol run cost $0.05 to $0.09 of API credit, priced from the
-  token usage the API reported, cache discount included
-  (`results/checks/llm_spend.txt`). The first six gpt-6.1-sol runs saved no
-  cached-token counts, so the four of them with reports price every prompt token
-  at the full rate ($0.44 to $0.76 each).
+- **Late direct fixes:** for efficient-kan, PyTorch-GAN and pytorch-wgan the direct
+  fix was at first only the one-line DataLoader fix from the go/no-go check. The full
+  direct fixes in the table came after the agent runs, with their reports at hand;
+  the pytorch-wgan one borrows gpt-6.1-sol's idea of skipping the generator's
+  gradients in critic steps.
+- **Cost:** an agent run with gpt-6.1-sol cost $0.05 to $0.09 of API credit and a
+  one-patch run $0.026 to $0.15; every gpt-6-luna call in the project cost $0.08 in
+  total. All are priced from the token usage the API reported, cache discount
+  included (`results/checks/llm_spend.txt`). The first six gpt-6.1-sol agent runs
+  saved no cached-token counts, so the four of them with reports price every prompt
+  token at the full rate ($0.44 to $0.76 each).
 
 ### Planted test suite
 
@@ -303,11 +355,15 @@ motivated the project (`results/survey/`).
   repos whose loss varies a lot between seeds, it can only catch large changes.
   nerf-pytorch's loss varies about 2x between seeds, so its bolder blind patches
   (the whole render in bf16) passed a check that can't say much.
-- The agent tries one change per round and keeps only measured wins, so it is
-  cautious. With gpt-6-luna it rarely attempted the bigger changes that won most in
-  the hand fixes, such as switching on flash attention or compiling a library's
-  code; gpt-6.1-sol did, but neither model tried bf16 on a GAN with a gradient
-  penalty.
+- The agent tries one change per round and keeps it only if it is at least 3%
+  faster in every pair, so small gains that only add up together get dropped: one
+  blind patch from the same model beat it that way on five repos. With gpt-6-luna it
+  also rarely attempted the bigger changes, such as switching on flash attention or
+  compiling a library's code; gpt-6.1-sol did.
+- Python only. The tools search and edit the repo's Python code, and the profiler
+  maps time to Python lines. A compiled C++/CUDA extension shows up only as GPU
+  kernels under the Python line that calls it, and there's no step to rebuild one
+  after an edit. None of the 15 repos had one in its training path.
 
 ## What didn't work
 
