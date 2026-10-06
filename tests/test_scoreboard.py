@@ -172,10 +172,19 @@ def test_compare_models_counts_harmful_blind_patches_and_averages(tmp_path, monk
     save(tmp_path / "eval/llm/nerf/llm-gpt-6.1-sol-20261025-030000.json",
          {"target": "nerf", "model": sol, "measured_speedup": 1.5, "speedup": 1.5,
           "attempts": [{"change": "x", "keep": True, "reason": "1.50x faster"}]})  # fmt: skip
+    loss = {"change": "x", "keep": False, "reason": "loss moved by 0.5, more than 0.1"}
+    save(tmp_path / "eval/llm/ddpm/llm-gpt-6-luna-20261025-040000.json",
+         {"target": "ddpm", "model": luna, "measured_speedup": 1.2, "speedup": 1.2,
+          "attempts": [{"change": "x", "keep": True, "reason": "1.20x faster"}]})  # fmt: skip
+    save(tmp_path / "eval/llm/nerf/llm-gpt-6-luna-20261025-040000.json",
+         {"target": "nerf", "model": luna, "measured_speedup": 2.0, "speedup": 1.0,
+          "attempts": [loss]})  # fmt: skip
     monkeypatch.setattr(scoreboard, "RESULTS", tmp_path)
 
     lines = scoreboard.compare_models().splitlines()
-    assert lines[2] == "| ddpm | 1.29x | 2.54x | 1.00x harmful | 2.00x |"
-    assert lines[3] == "| nerf | 1.18x | 1.00x | 1.50x | 2.00x |"
-    assert lines[4] == "| **Geometric mean** | **1.23x** | **1.59x** | **1.22x** | **2.00x** |"
-    assert lines[5] == "| Harmful changes shipped | 0 | 0 | 1 | 0 |"
+    assert lines[2] == "| ddpm | 2.54x | 1.00x harmful | 1.29x | 1.20x | 2.00x |"
+    assert lines[3] == "| nerf | 1.00x | 1.50x | 1.18x | 1.00x harmful | 2.00x |"
+    assert lines[4] == (
+        "| **Geometric mean** | **1.59x** | **1.22x** | **1.23x** | **1.10x** | **2.00x** |"
+    )
+    assert lines[5] == "| Harmful changes shipped | 0 | 1 | 0 | 1 | 0 |"

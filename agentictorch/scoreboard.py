@@ -205,40 +205,45 @@ def shipped(record: dict) -> float:
 
 
 def compare_models() -> str:
-    """Per repo, each against the original on an L4: the agent with the cheap and the
-    stronger model, the stronger model's one blind patch, and the direct fix; then the
-    geometric means and harmful changes shipped over the repos all four ran. A
-    stronger-model agent run whose report was lost keeps its later final pair."""
+    """Per repo, each against the original on an L4: each model as the agent and as one
+    blind patch (the same model with and without the loop), and the direct fix as a
+    reference; then the geometric means and harmful changes shipped over the repos all
+    of them ran. A stronger-model agent run whose report was lost keeps its later final
+    pair."""
     sol_model = MODELS["gpt-6.1-sol"].name
-    luna = latest("agent", MAIN_MODEL)
     sol = latest("agent", sol_model)
     for path in (RESULTS / "final-pairs").glob("*.json"):
         record = json.loads(path.read_text())
         sol.setdefault(record["target"], record)
-    patches = latest("llm", sol_model)
-    direct = hand_fixes()
-    targets = sorted(
-        t for t in set(luna) & set(sol) & set(patches) & set(direct) if not t.startswith("bench-")
-    )
-    lines = [
-        f"| Repo | Agent, gpt-6-luna | Agent, gpt-6.1-sol | One patch, gpt-6.1-sol | {DIRECT} |",
-        "|---|---|---|---|---|",
+    # A blind patch ships whatever it does; the others keep measured wins only.
+    columns = [
+        ("Agent, gpt-6.1-sol", sol, False),
+        ("One patch, gpt-6.1-sol", latest("llm", sol_model), True),
+        ("Agent, gpt-6-luna", latest("agent", MAIN_MODEL), False),
+        ("One patch, gpt-6-luna", latest("llm", MAIN_MODEL), True),
+        (DIRECT, hand_fixes(), False),
     ]
-    columns, harmful = [[], [], [], []], 0
+    common = set.intersection(*(set(runs) for _, runs, _ in columns))
+    targets = sorted(t for t in common if not t.startswith("bench-"))
+    lines = [
+        "| Repo | " + " | ".join(header for header, _, _ in columns) + " |",
+        "|---" * (len(columns) + 1) + "|",
+    ]
+    speedups, harmful = [[] for _ in columns], [0] * len(columns)
     for target in targets:
-        patch, harm = outcome(patches[target], "llm")
-        harmful += harm
-        row = [shipped(luna[target]), shipped(sol[target]), patch, shipped(direct[target])]
-        for column, speedup in zip(columns, row, strict=True):
-            column.append(speedup)
-        cells = [f"{s:.2f}x" for s in row]
-        cells[2] += " harmful" if harm else ""
+        cells = []
+        for i, (_, runs, blind) in enumerate(columns):
+            speedup, harm = (
+                outcome(runs[target], "llm") if blind else (shipped(runs[target]), False)
+            )
+            speedups[i].append(speedup)
+            harmful[i] += harm
+            cells.append(f"{speedup:.2f}x" + (" harmful" if harm else ""))
         lines.append(f"| {target} | " + " | ".join(cells) + " |")
     if targets:
-        means = " | ".join(f"**{geometric_mean(c):.2f}x**" for c in columns)
+        means = " | ".join(f"**{geometric_mean(s):.2f}x**" for s in speedups)
         lines.append(f"| **Geometric mean** | {means} |")
-        # Only the blind patch can ship harm: the others keep measured wins only.
-        lines.append(f"| Harmful changes shipped | 0 | 0 | {harmful} | 0 |")
+        lines.append("| Harmful changes shipped | " + " | ".join(map(str, harmful)) + " |")
     return "\n".join(lines)
 
 
