@@ -1,6 +1,6 @@
 # Pointnet_Pointnet2_pytorch (yanx27): PointNet++ classification on a ModelNet40 subset
 # (40 training and 10 test shapes per class, so an epoch outlasts the measured steps).
-# The hardest target: the costs hide in the model's geometry helpers, such as farthest
+# The hardest target: the slow parts hide in the model's geometry helpers, such as farthest
 # point sampling written as a Python loop, not in the training loop.
 repo = "https://github.com/yanx27/Pointnet_Pointnet2_pytorch"
 commit = "eb64fe0b4c24055559cea26299cb485dcb43d8dd"

@@ -5,7 +5,7 @@ python -m agentictorch.scoreboard
 
 For planted cases, "recovered" is the share of the slowdown the setup won back:
 with t the step time, (t_planted - t_after) / (t_planted - t_clean), from the
-measured cost of each planted mistake in results/bench.
+measured slowdown of each planted mistake in results/bench.
 """
 
 import csv
@@ -29,7 +29,7 @@ HARM_MARGIN = 0.97
 DIRECT = "Reference model, direct"
 
 
-def planted_cost(target: str) -> float | None:
+def planted_slowdown(target: str) -> float | None:
     """How much faster the clean script is than the planted one, if it was measured."""
     path = RESULTS / "bench" / f"{target}-reference.json"
     if not path.exists():
@@ -38,10 +38,10 @@ def planted_cost(target: str) -> float | None:
     return record["speedup"] if record["keep"] else 1.0
 
 
-def recovered(speedup: float, cost: float) -> float | None:
-    if cost <= 1.0:
+def recovered(speedup: float, slowdown: float) -> float | None:
+    if slowdown <= 1.0:
         return None
-    return (1 - 1 / speedup) / (1 - 1 / cost)
+    return (1 - 1 / speedup) / (1 - 1 / slowdown)
 
 
 def latest(setup: str, model: str | None = None) -> dict[str, dict]:
@@ -92,20 +92,20 @@ def outcome(record: dict, setup: str) -> tuple[float, bool]:
 def table(model: str = MAIN_MODEL) -> str:
     results = compared(model)
     targets = sorted(results["agent"])
-    # Only planted cases have a known cost; real repos leave the column out.
-    planted = any(planted_cost(t) for t in targets)
-    columns = ["Target", *(["Planted cost"] if planted else []), *SETUPS]
+    # Only planted cases have a known slowdown; real repos leave the column out.
+    planted = any(planted_slowdown(t) for t in targets)
+    columns = ["Target", *(["Planted slowdown"] if planted else []), *SETUPS]
     lines = ["| " + " | ".join(columns) + " |", "|---" * len(columns) + "|"]
     for target in targets:
-        cost = planted_cost(target)
-        cells = [f"{cost:.2f}x" if cost else ""] if planted else []
+        slowdown = planted_slowdown(target)
+        cells = [f"{slowdown:.2f}x" if slowdown else ""] if planted else []
         for setup in SETUPS:
             record = results[setup].get(target)
             if record is None:
                 cells.append("")
                 continue
             speedup, harmful = outcome(record, setup)
-            share = recovered(speedup, cost) if cost else None
+            share = recovered(speedup, slowdown) if slowdown else None
             cell = f"{speedup:.2f}x" + (f" ({share:.0%})" if share is not None else "")
             cells.append(cell + (" harmful" if harmful else ""))
         lines.append(f"| {target} | " + " | ".join(cells) + " |")
@@ -297,7 +297,7 @@ def headline() -> str:
 
 def models() -> str:
     """The agent with each model: the speedup it kept per target, the harmful attempts
-    its keep rule caught, and what the model cost."""
+    its keep rule caught."""
     runs = {key: latest("agent", model.name) for key, model in MODELS.items()}
     runs = {key: r for key, r in runs.items() if r}
     targets = sorted({t for r in runs.values() for t in r})
@@ -308,9 +308,7 @@ def models() -> str:
     caught = [
         sum(harmful_attempt(a) for x in r.values() for a in x["attempts"]) for r in runs.values()
     ]
-    cost = [sum(x["llm_cost"] for x in r.values()) for r in runs.values()]
     lines.append("| Harmful attempts caught | " + " | ".join(map(str, caught)) + " |")
-    lines.append("| LLM cost | " + " | ".join(f"${c:.2f}" for c in cost) + " |")
     return "\n".join(lines)
 
 

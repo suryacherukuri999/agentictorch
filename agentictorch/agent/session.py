@@ -1,4 +1,4 @@
-"""One agent run on one target: the working copy, its measurements and the round budget.
+"""One agent run on one target: the working copy, its measurements and its benchmark rounds.
 
 The working copy is a git repo. HEAD holds every kept change; the model edits
 the working tree. Each benchmark runs HEAD and the working tree as a pair, and
@@ -159,7 +159,7 @@ class Session:
             )
 
     def _check_syntax(self) -> None:
-        """Catch Python syntax errors locally instead of spending a GPU round on them."""
+        """Catch Python syntax errors locally instead of wasting a GPU round on them."""
         for path in self._git("diff", "--name-only").split():
             if path.endswith(".py"):
                 try:

@@ -1,7 +1,7 @@
 # The dataset, tokenizer and weights are cached in the volume and used offline.
 command = "TOKENIZERS_PARALLELISM=false HF_HOME=hf HF_HUB_OFFLINE=1 HF_DATASETS_OFFLINE=1 python train.py"
 # The scripts validate every 50 steps. Warming up past the first validation keeps its
-# one-time costs (worker start-up, cuDNN autotuning for new shapes) out of the window.
+# one-time work (worker start-up, cuDNN autotuning for new shapes) out of the window.
 warmup = 60
 
 [image]

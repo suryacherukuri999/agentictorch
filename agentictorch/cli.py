@@ -19,7 +19,7 @@ def target_names() -> list[str]:
 
 
 def gpu_type(name: str) -> str | None:
-    """A Modal GPU type, or None for a CPU-only container ("cpu"), to test setups cheaply."""
+    """A Modal GPU type, or None for a CPU-only container ("cpu"), to test setups without a GPU."""
     return None if name == "cpu" else name
 
 
@@ -277,8 +277,8 @@ def main(argv: list[str] | None = None) -> None:
     p.set_defaults(func=cmd_record)
 
     args = parser.parse_args(argv)
-    # Exit through the normal path when killed, so Modal apps stop and the cost
-    # ledger records the run instead of leaving containers running.
+    # Exit through the normal path when killed, so Modal apps stop instead of leaving
+    # containers running.
     signal.signal(signal.SIGTERM, lambda signum, frame: sys.exit(128 + signum))
     args.func(args)
 

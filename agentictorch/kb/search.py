@@ -1,7 +1,7 @@
 """Hybrid search over the knowledge base: BM25 and embeddings, fused, then reranked.
 
 Build the index once after fetching: python -m agentictorch.kb.search build
-Both models are small and run locally, so search costs nothing.
+Both models are small and run locally, so search needs no API.
 """
 
 import json

@@ -32,8 +32,7 @@ def markdown(run: Run) -> str:
         f"- Command: `{s.target.command}`",
         f"- Baseline: {_speed(base)} over {len(base.runs)} runs" if base else "- Baseline: none",
         f"- Model: {run.model}, {run.turns} turns, "
-        f"{run.tokens['input']} input and {run.tokens['output']} output tokens, "
-        f"${run.cost:.4f}",
+        f"{run.tokens['input']} input and {run.tokens['output']} output tokens",
         "",
     ]
     if run.stopped:
@@ -94,7 +93,6 @@ def summary(run: Run) -> dict:
         }
         if final
         else None,
-        "llm_cost": run.cost,
         "turns": run.turns,
         "tokens": run.tokens,
         "stopped": run.stopped,

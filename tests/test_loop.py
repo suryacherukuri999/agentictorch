@@ -66,7 +66,7 @@ def test_runs_tools_until_finish_and_measures_the_result(session, monkeypatch):
 
     def chat(model, messages, tools):
         seen.append(list(messages))
-        return llm.Reply(next(replies), 10, 5, 0.0, False)
+        return llm.Reply(next(replies), 10, 5, False)
 
     monkeypatch.setattr(loop.llm, "chat", chat)
     result = loop.run(session, llm.Model("fake", "http://x"))
@@ -96,7 +96,7 @@ def test_blind_setup_makes_one_patch_and_measures_it_afterwards(session, monkeyp
 
     def chat(model, messages, tools):
         seen.append(([t["function"]["name"] for t in tools], list(messages)))
-        return llm.Reply(next(script), 10, 5, 0.0, False)
+        return llm.Reply(next(script), 10, 5, False)
 
     monkeypatch.setattr(loop.llm, "chat", chat)
     result = loop.run(session, llm.Model("fake", "http://x"), setup=loop.SETUPS["llm"])
@@ -151,7 +151,7 @@ def test_a_model_failure_ends_the_run_but_keeps_what_was_measured(session, monke
         message = next(script, None)
         if message is None:
             raise RuntimeError("ornith: timed out")
-        return llm.Reply(message, 10, 5, 0.0, False)
+        return llm.Reply(message, 10, 5, False)
 
     monkeypatch.setattr(loop.llm, "chat", chat)
     run = loop.run(session, llm.Model("m", "http://x"))
@@ -163,17 +163,12 @@ def test_a_model_failure_ends_the_run_but_keeps_what_was_measured(session, monke
 
 def test_a_failed_final_measurement_still_gives_a_report(session, monkeypatch):
     def broke(self):
-        raise RuntimeError("Modal spend this month is $29.00")
+        raise RuntimeError("Modal app stopped")
 
     monkeypatch.setattr(session_module.Session, "final", broke)
     script = iter(SCRIPT)
-    monkeypatch.setattr(
-        loop.llm, "chat", lambda m, msgs, t: llm.Reply(next(script), 1, 1, 0.0, False)
-    )
+    monkeypatch.setattr(loop.llm, "chat", lambda m, msgs, t: llm.Reply(next(script), 1, 1, False))
     run = loop.run(session, llm.Model("m", "http://x"))
 
     assert run.final is None and len(session.kept) == 1
-    assert (
-        run.stopped
-        == "the final measurement failed: RuntimeError: Modal spend this month is $29.00"
-    )
+    assert run.stopped == "the final measurement failed: RuntimeError: Modal app stopped"

@@ -2,8 +2,7 @@
 
 Ollama, Gemini, GitHub Models and OpenAI all accept the same chat-completions
 request with tools, so one client covers every model. Responses are cached on
-disk (free tiers are rate-limited), 429s are retried with backoff, and every
-call's cost is computed from its token usage. Paid calls stop at a hard budget.
+disk, and 429s are retried with backoff.
 """
 
 import hashlib
@@ -13,19 +12,11 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from pathlib import Path
 
 WORK = Path.home() / "agentictorch-work"
 CACHE = WORK / "llm-cache"
-LEDGER = WORK / "llm-costs.jsonl"
 KEYS = WORK / ".env"
-# Paid calls stop here, below the account's prepaid credit.
-PAID_BUDGET = 4.50
-
-
-class BudgetExceeded(RuntimeError):
-    pass
 
 
 @dataclass(frozen=True)
@@ -33,19 +24,10 @@ class Model:
     name: str
     base_url: str
     key_env: str | None = None
-    usd_per_m_input: float = 0.0
-    usd_per_m_output: float = 0.0
-    # Prompt tokens the provider serves from its cache; an agent resends its whole
-    # conversation every turn, so most input is cached. 0 means billed at full price.
-    usd_per_m_cached_input: float = 0.0
     temperature: float = 0.0
     reasoning_effort: str | None = None  # for thinking models; omitted when None
     max_tokens_field: str = "max_tokens"  # newer OpenAI models want max_completion_tokens
     api: str = "chat"  # "responses" for models that take tools only through /v1/responses
-
-    @property
-    def paid(self) -> bool:
-        return bool(self.usd_per_m_input or self.usd_per_m_output)
 
 
 @dataclass(frozen=True)
@@ -53,7 +35,6 @@ class Reply:
     message: dict  # the assistant message, with "content" and maybe "tool_calls"
     input_tokens: int
     output_tokens: int
-    cost: float
     cached: bool
 
 
@@ -76,34 +57,12 @@ def chat(model: Model, messages: list[dict], tools: list[dict], max_tokens: int 
         body = json.loads(cached.read_text())
         return _reply(model, body, cached=True)
 
-    if model.paid:
-        spent = paid_spend()
-        worst = _cost(model, len(json.dumps(request)) // 3, max_tokens)
-        if spent + worst > PAID_BUDGET:
-            raise BudgetExceeded(f"paid model spend is ${spent:.2f}; stopping at ${PAID_BUDGET}")
     body = _post(model, request)
     if model.api == "responses":
         body = _as_chat(body)
     CACHE.mkdir(parents=True, exist_ok=True)
     cached.write_text(json.dumps(body))
-    reply = _reply(model, body, cached=False)
-    _record(model, reply)
-    return reply
-
-
-def paid_spend() -> float:
-    """The ledger's total. An entry with "reconciled_total" sets the total to the spend
-    read from the provider's own billing, and later entries add to it."""
-    if not LEDGER.exists():
-        return 0.0
-    total = 0.0
-    for line in LEDGER.read_text().splitlines():
-        if line:
-            entry = json.loads(line)
-            total = (
-                entry["reconciled_total"] if "reconciled_total" in entry else total + entry["cost"]
-            )
-    return total
+    return _reply(model, body, cached=False)
 
 
 def api_key(name: str) -> str | None:
@@ -216,35 +175,9 @@ def _as_chat(body: dict) -> dict:
 def _reply(model: Model, body: dict, cached: bool) -> Reply:
     usage = body.get("usage") or {}
     tokens_in, tokens_out = usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
-    from_cache = (usage.get("prompt_tokens_details") or {}).get("cached_tokens") or 0
     return Reply(
         message=body["choices"][0]["message"],
         input_tokens=tokens_in,
         output_tokens=tokens_out,
-        cost=0.0 if cached else _cost(model, tokens_in, tokens_out, from_cache),
         cached=cached,
     )
-
-
-def _cost(model: Model, tokens_in: int, tokens_out: int, from_cache: int = 0) -> float:
-    cached_price = model.usd_per_m_cached_input or model.usd_per_m_input
-    fresh = tokens_in - from_cache
-    return (
-        fresh * model.usd_per_m_input
-        + from_cache * cached_price
-        + tokens_out * model.usd_per_m_output
-    ) / 1e6
-
-
-def _record(model: Model, reply: Reply) -> None:
-    if not model.paid:
-        return
-    entry = {
-        "time": datetime.now(UTC).isoformat(timespec="seconds"),
-        "model": model.name,
-        "input_tokens": reply.input_tokens,
-        "output_tokens": reply.output_tokens,
-        "cost": reply.cost,
-    }
-    with LEDGER.open("a") as f:
-        f.write(json.dumps(entry) + "\n")

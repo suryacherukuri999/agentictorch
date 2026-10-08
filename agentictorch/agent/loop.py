@@ -69,7 +69,6 @@ class Run:
     summary: str | None
     final: Attempt | None
     sources: dict[str, str]
-    cost: float = 0.0
     turns: int = 0
     tokens: dict[str, int] = field(default_factory=lambda: {"input": 0, "output": 0})
     stopped: str | None = None  # why the run ended before the model finished, if it did
@@ -136,13 +135,12 @@ def run(
         try:
             reply = llm.chat(model, messages, schemas)
         except (RuntimeError, OSError) as e:
-            # A timeout, an outage or the budget ends the run, but the changes
+            # A timeout or an outage ends the run, but the changes
             # already measured and kept still count.
             result.stopped = f"the model failed: {e}"
             log(f"stopped: {result.stopped}")
             break
         result.turns += 1
-        result.cost += reply.cost
         result.tokens["input"] += reply.input_tokens
         result.tokens["output"] += reply.output_tokens
         # "items" holds a Responses API turn's raw output, which goes back in the next request.

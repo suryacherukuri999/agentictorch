@@ -44,9 +44,8 @@ Ollama. All runs date from October 2026.
 
 ### The agent on 15 real repos
 
-The agent ran with gpt-6-luna, a small OpenAI model; every gpt-6-luna call in the
-project, all setups included, cost $0.09 of API credit. For each repo where it
-kept a change, the original and the changed code were measured again on an A100:
+The agent ran with gpt-6-luna, a small OpenAI model. For each repo where it kept a
+change, the original and the changed code were measured again on an A100:
 
 | Repo | Stars | GPU | Before (ms/step) | After (ms/step) | Speedup | Loss | Fixes | Pull request |
 |---|---|---|---|---|---|---|---|---|
@@ -86,7 +85,7 @@ means nothing was kept:
   reads the code and writes one patch without running anything, and the patch ships
   whatever it does.
 - **Agent, gpt-6-luna** and **One patch, gpt-6-luna:** the same pair with the small
-  model, at a twentieth of the price per token.
+  model.
 - **Reference model, direct:** the fixes from the section above. A different model
   working directly, with measurements, so a reference rather than a test of the loop.
 
@@ -165,10 +164,10 @@ Where the agent was faster:
 |---|---|---|---|
 | pointnet2 | 4.89x | 1.93x | Both removed the syncs in farthest point sampling; only the agent went on to a Triton kernel for the whole sampling loop (1.95x), checked over measured rounds |
 | pytorch-yolov3 | 2.10x | 0.60x harmful | The patch turned on cuDNN autotuning and torch.compile on batch shapes that keep changing, and missed persistent DataLoader workers, the agent's biggest win (1.50x) |
-| efficient-kan | 3.58x | 2.17x | The agent kept four persistent workers (2.46x) and compiling with CUDA graphs (1.28x); the patch used two workers, plain compile and bf16, and which part cost it is untested |
+| efficient-kan | 3.58x | 2.17x | The agent kept four persistent workers (2.46x) and compiling with CUDA graphs (1.28x); the patch used two workers, plain compile and bf16, and which part slowed it is untested |
 | vit-pytorch | 2.43x | 1.80x | Both switched to fused attention; only the agent compiled, with CUDA graphs (1.51x) |
 | transfusion-pytorch | 1.58x | 0.86x harmful | The patch added bf16, which slows this small transformer (the agent measured 0.97x and reverted it), and didn't compile; the agent's compile gave 1.56x |
-| pytorch-gan-dcgan | 2.15x | 1.93x | The same DataLoader fix; the patch added bf16 and cuDNN autotuning to a tiny GAN, and which part cost it is untested |
+| pytorch-gan-dcgan | 2.15x | 1.93x | The same DataLoader fix; the patch added bf16 and cuDNN autotuning to a tiny GAN, and which part slowed it is untested |
 
 Where the one patch was faster:
 
@@ -200,9 +199,8 @@ DETR resisted everyone. At batch size 2, Python overhead per op sets the pace;
 neither agent run kept a change, the blind patch's dynamic-shape compile timed out,
 and the best of three direct attempts measured 1.06x.
 
-On pytorch-ddpm and rectified-flow-pytorch, the monthly GPU
-budget guard stopped the gpt-6.1-sol agent run's final measurement before it wrote
-a report. Their numbers come from measuring the kept changes against the original
+On pytorch-ddpm and rectified-flow-pytorch, the gpt-6.1-sol agent run stopped before
+its final measurement and wrote no report. Their numbers come from measuring the kept changes against the original
 again, in pairs (`results/final-pairs/`).
 
 For efficient-kan, PyTorch-GAN and pytorch-wgan the direct
@@ -210,13 +208,6 @@ fix was at first only the one-line DataLoader fix from the go/no-go check. The f
 direct fixes in the table came after the agent runs, with their reports at hand;
 the pytorch-wgan one borrows gpt-6.1-sol's idea of skipping the generator's
 gradients in critic steps.
-
-An agent run with gpt-6.1-sol cost $0.05 to $0.09 of API credit and a
-one-patch run $0.026 to $0.15; every gpt-6-luna call in the project cost $0.09 in
-total. All are priced from the token usage the API reported, cache discount
-included (`results/checks/llm_spend.txt`). The first six gpt-6.1-sol agent runs
-saved no cached-token counts, so the four of them with reports price every prompt
-token at the full rate ($0.44 to $0.76 each).
 
 ### Against the reference model working directly
 
@@ -283,8 +274,8 @@ neither, and its keep rule caught three harmful attempts of its own.
 ### Planted test suite
 
 Small scripts of our own (ResNet-18 on CIFAR-10, a character-level GPT, DistilBERT),
-each with one planted mistake; the planted cost is how much faster the clean script
-runs. 6 of the 14 mistakes cost nothing measurable on an L4, in speed or memory.
+each with one planted mistake; the planted slowdown is how much faster the clean
+script runs. 6 of the 14 mistakes made no measurable difference on an L4, in speed or memory.
 With a local 9B model (ornith-1.5 through Ollama), the agent won back all of a 2.48x
 DataLoader slowdown (2.56x) and 92% of a 2.23x fp32 slowdown (2.03x). The local
 model was too slow for the real repos: Ollama serves it one request at a time, so
@@ -319,7 +310,7 @@ each measured against the best version so far. When it finishes you get a report
 `results/eval/agent/pytorch-ddpm/` with every change, its measured effect, the final
 diff and the docs the agent read, and the edited code in
 `~/agentictorch-work/work/pytorch-ddpm/`, a git copy where each kept change is a
-commit. With gpt-6.1-sol a run costs $0.05 to $0.09 of API credit plus some GPU time.
+commit.
 
 `--model` takes any model in `agentictorch/agent/models.py`. `--setup llm` has the
 model write one patch without measuring, for comparison. `measure` and `profile` show
@@ -437,8 +428,8 @@ reciprocal rank fusion and reranked with `bge-reranker-base`, all local. On a
   precision changes behind an opt-in flag for that reason.
 - Speedups depend on the GPU. A result on an L4 says nothing about another GPU,
   and results are never compared across GPUs.
-- Some static warning signs cost nothing in practice. Of 14 planted mistakes in
-  the test suite, 6 had no measurable cost on an L4, in speed or memory, because
+- Some static warning signs don't matter in practice. Of 14 planted mistakes in
+  the test suite, 6 had no measurable effect on an L4, in speed or memory, because
   they were off the bottleneck (for example, `loss.item()` every step in a loop
   that waits on the GPU anyway).
 - With two seeds, the loss check is only as tight as the loss is repeatable. On

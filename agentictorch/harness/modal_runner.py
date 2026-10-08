@@ -21,13 +21,10 @@ from pathlib import Path
 
 import modal
 
-from agentictorch import costs
 from agentictorch.harness import runner
 from agentictorch.harness.runner import Job
 from agentictorch.targets import Target
 
-# These runs need a few GB of GPU memory; bigger GPUs only spend the credits faster.
-GPUS = ("T4", "L4", "A100-40GB")
 # An A100-40GB request has run on 40GB, 80GB and PCIe cards, billed as A100-40GB.
 # A pair split over two containers could land on two GPU models, so it runs in one.
 MIXED_POOLS = {"A100-40GB"}
@@ -35,10 +32,6 @@ CPU_CORES = 8.0
 MEMORY_GIB = 16
 # Image pull, container start and data staging, on top of the run's own timeout.
 STARTUP_ALLOWANCE = 600
-# Billed time outside our own timer in each container (image load, Python start), for
-# costing. Measured on 2026-10-25: Modal billed about 10 s per container beyond it,
-# over 503 L4 containers.
-BILLED_STARTUP = 10
 MAX_UPLOAD = 200 * 2**20
 
 base_image = (
@@ -127,11 +120,7 @@ def _run(
     verbose: bool = False,
 ) -> list[list[dict]]:
     """Run each list of jobs in its own container, in order, and return their results."""
-    if gpu is not None and gpu not in GPUS:
-        raise ValueError(f"GPU must be one of {GPUS}, got {gpu}")
     timeout = max(map(len, job_lists)) * target.timeout + STARTUP_ALLOWANCE
-    rate = costs.hourly_rate(gpu, CPU_CORES, MEMORY_GIB)
-    costs.check(planned=len(job_lists) * rate * timeout / 3600)
 
     payloads = {}
     specs = []
@@ -162,40 +151,22 @@ def _run(
         serialized=True,
     )(_measure_in_container)
 
-    start = time.monotonic()
-    results = None
-    try:
-        with _output(verbose), _running(app):
-            calls = [
-                function.spawn(
-                    spec,
-                    steps=steps or target.steps,
-                    warmup=warmup or target.warmup,
-                    seed=seed,
-                    timeout=target.timeout,
-                    env=target.env,
-                    dataset=target.dataset,
-                    data_path=target.data_path,
-                    profile=profile,
-                )
-                for spec, seed in zip(specs, seeds, strict=True)
-            ]
-            results = [call.get() for call in calls]
-            return results
-    finally:
-        if results:
-            # Each container timed itself; add what Modal bills before our code runs.
-            seconds = sum(runs[-1]["container_s"] + BILLED_STARTUP for runs in results)
-        else:
-            # Failed or interrupted: count every container for the whole wall time.
-            seconds = len(job_lists) * (time.monotonic() - start)
-        costs.record(
-            target=target.name,
-            gpu=gpu,
-            containers=len(job_lists),
-            seconds=round(seconds, 1),
-            cost=round(rate * seconds / 3600, 4),
-        )
+    with _output(verbose), _running(app):
+        calls = [
+            function.spawn(
+                spec,
+                steps=steps or target.steps,
+                warmup=warmup or target.warmup,
+                seed=seed,
+                timeout=target.timeout,
+                env=target.env,
+                dataset=target.dataset,
+                data_path=target.data_path,
+                profile=profile,
+            )
+            for spec, seed in zip(specs, seeds, strict=True)
+        ]
+        return [call.get() for call in calls]
 
 
 def download(target: Target, *, verbose: bool = True) -> str:
@@ -203,8 +174,6 @@ def download(target: Target, *, verbose: bool = True) -> str:
     if not (target.dataset and target.download):
         raise ValueError(f"{target.name} has no dataset to download")
     cpu, memory_gib, timeout = 2.0, 8, 3600
-    rate = costs.hourly_rate(None, cpu, memory_gib)
-    costs.check(planned=rate * timeout / 3600)
 
     app = modal.App(f"agentictorch-{target.name}-data")
     function = app.function(
@@ -215,19 +184,8 @@ def download(target: Target, *, verbose: bool = True) -> str:
         timeout=timeout,
         serialized=True,
     )(_download_in_container)
-    start = time.monotonic()
-    try:
-        with _output(verbose), _running(app):
-            return function.remote(target.download, target.dataset)
-    finally:
-        seconds = time.monotonic() - start
-        costs.record(
-            target=target.name,
-            gpu=None,
-            containers=1,
-            seconds=round(seconds, 1),
-            cost=round(rate * seconds / 3600, 4),
-        )
+    with _output(verbose), _running(app):
+        return function.remote(target.download, target.dataset)
 
 
 def pack(repo_dir: Path) -> bytes:

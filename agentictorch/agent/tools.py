@@ -65,7 +65,7 @@ SCHEMAS = [
     _schema(
         "profile",
         "Profile a short run of the best version so far: GPU busy share, data-loading "
-        "wait, host-device syncs and top ops. Costs GPU time; at most twice per run.",
+        "wait, host-device syncs and top ops. Slower than a normal run; at most twice per run.",
         {},
         [],
     ),

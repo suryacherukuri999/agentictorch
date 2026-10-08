@@ -60,7 +60,7 @@ def test_reverts_a_change_that_is_not_faster(session):
     assert (session.repo / "train.py").read_text() == "speed = 'SLOW'\n"
 
 
-def test_refuses_to_benchmark_without_a_change_or_past_the_budget(session):
+def test_refuses_to_benchmark_without_a_change_or_past_the_last_round(session):
     with pytest.raises(ToolError, match="nothing has changed"):
         session.benchmark("nothing")
     for word in ("A", "B"):
@@ -79,7 +79,7 @@ def test_final_compares_the_original_with_everything_kept(session):
     assert "+speed = 'FAST'" in final.diff
 
 
-def test_syntax_errors_are_caught_before_spending_a_round(session):
+def test_syntax_errors_are_caught_before_using_a_round(session):
     apply_edit(session.repo, "train.py", "speed = 'SLOW'", "speed = ('SLOW'")
     with pytest.raises(ToolError, match="syntax error in train.py line 1"):
         session.benchmark("broken")
