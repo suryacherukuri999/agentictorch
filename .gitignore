@@ -18,3 +18,24 @@ traces/
 *.pt.trace.json
 
 .DS_Store
+
+# editors, packaging and logs
+.vscode/
+.idea/
+*.egg-info/
+build/
+*.log
+
+# copies a cloud-synced folder makes when a file changes twice (train 2.py)
+* [0-9].*
+
+# credentials, as a safety net: keys belong in ~/agentictorch-work/.env
+.env.*
+*.pem
+*.key
+.modal.toml
+
+# dataset archives
+*.tar
+*.tar.gz
+*.zip

@@ -290,14 +290,9 @@ def _compiled():
 
 
 def _repo_lines_mode():
-    """A torch function mode that runs each torch call made from repo code inside
-    a profiler range named after the calling line, so every op in the trace can
-    be traced back to the exact line.
-
-    Stacks from with_stack=True can't do this: on PyTorch 2.14 they name each
-    frame by its function's def line, or by the line it was on when profiling
-    started, not by the line that ran the op.
-    """
+    """A torch function mode that runs each torch call from repo code inside a profiler
+    range named after its line. with_stack=True can't do this on PyTorch 2.14: it names
+    frames by their def line."""
     import torch
 
     class RepoLines(torch.overrides.TorchFunctionMode):
@@ -461,10 +456,9 @@ def _finish():
 
 
 def _write_at_exit():
-    # The run ended before the last measured step: it crashed or ran out of data.
-    # Child processes (DataLoader workers, a torchrun launcher's trainer) also
-    # load this file, so only write when this process stepped or is the main one.
-    # A forked child inherits the parent's state, so skip those too.
+    # The run ended early: it crashed or ran out of data. DataLoader workers and
+    # launcher children load this file too, so only the process that stepped, or the
+    # main one, writes; forked children inherit the parent's state and skip.
     if _state.finished or os.getpid() != _state.pid:
         return
     if _state.step or (_state.error and multiprocessing.parent_process() is None):

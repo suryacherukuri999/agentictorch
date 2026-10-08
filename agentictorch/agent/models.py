@@ -3,16 +3,12 @@
 from agentictorch.agent.llm import Model
 
 MODELS = {
-    # Local and free, through Ollama on the Mac. Checked on ollama.com 2026-10-24:
-    # tool calling, 6.6 GB download, fits the M4's 24 GB with room for context.
-    # With greedy decoding it can reason until the token cap without answering;
-    # a little temperature and low reasoning effort keep turns short.
+    # Local and free through Ollama. Greedy decoding can reason until the token cap
+    # without answering, so it gets a little temperature and low reasoning effort.
     "ornith-9b": Model(
         "ornith-1.5:9b", "http://localhost:11434/v1", temperature=0.6, reasoning_effort="low"
     ),
-    # Free tier through Google's OpenAI-compatible endpoint. Checked 2026-10-24:
-    # gemini-2.5-flash is closed to new users, free-tier calls took 9-80 s each, and
-    # the free tier allows 20 requests a day per model (from the API's quota error),
+    # Free tier through Google's OpenAI-compatible endpoint; its 20 requests a day are
     # too few for an agent run of 30-40 turns.
     "gemini-flash": Model(
         "gemini-3.8-flash",
@@ -20,9 +16,8 @@ MODELS = {
         key_env="GEMINI_API_KEY",
         temperature=1.0,
     ),
-    # Paid, for the final comparison only. Checked on developers.openai.com 2026-10-24:
-    # $0.10 per million input tokens ($0.01 cached) and $0.50 per million output tokens, and Chat
-    # Completions allows tool calls only with reasoning effort "none".
+    # Prices per million tokens as listed on 2026-10-24. Chat Completions takes tool calls
+    # only with reasoning effort "none".
     "gpt-6-luna": Model(
         "gpt-6-luna",
         "https://api.openai.com/v1",
@@ -33,10 +28,8 @@ MODELS = {
         reasoning_effort="none",
         max_tokens_field="max_completion_tokens",
     ),
-    # Paid and stronger, to check whether a better model changes the outcome. Checked on
-    # developers.openai.com 2026-10-25: $2.00 per million input tokens ($0.10 cached) and
-    # $10.00 per million output tokens; it takes tools with reasoning only through the
-    # Responses API.
+    # The stronger model, priced as listed on 2026-10-25. It takes tools with reasoning only
+    # through the Responses API.
     "gpt-6.1-sol": Model(
         "gpt-6.1-sol",
         "https://api.openai.com/v1",

@@ -52,13 +52,8 @@ def is_faster(base: Measurement, cand: Measurement) -> bool:
 
 
 def loss_tolerance(base: Measurement, cand: Measurement) -> float:
-    """How far the mean loss may move: a two-sample t-test at 95%, using the
-    run-to-run spread of the loss pooled over both configurations.
-
-    Comparing each run with the baseline run of the same seed looked tighter but
-    failed on chaotic training: with cuDNN autotuning and a high learning rate,
-    two ResNet runs with the same seed and code ended 0.1 apart in loss.
-    """
+    """How far the mean loss may move: a 95% two-sample t-test on the run-to-run spread,
+    pooled over both configurations. Same-seed comparisons failed on chaotic training."""
     deviations = [x - mean(m.loss) for m in (base, cand) for x in m.loss]
     dof = len(deviations) - 2
     pooled_sd = math.sqrt(sum(d * d for d in deviations) / dof)

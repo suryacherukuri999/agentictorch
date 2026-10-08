@@ -113,9 +113,8 @@ def table(model: str = MAIN_MODEL) -> str:
 
 
 def totals(model: str = MAIN_MODEL) -> str:
-    """Per setup, over the targets every setup ran: the typical speedup that ships (a patch
-    that crashes counts as 1.00x), harmful changes shipped and, for the agent, the harmful
-    attempts its keep rule caught and reverted."""
+    """Per setup, over the targets every setup ran: the typical speedup that ships (a crash
+    counts as 1.00x), harmful changes shipped, and harmful attempts the agent caught."""
     lines = [
         "| Setup | Targets | Speedup (geometric mean) | Harmful changes shipped "
         "| Harmful attempts caught |",
@@ -135,7 +134,6 @@ def totals(model: str = MAIN_MODEL) -> str:
 
 
 def maintainers() -> dict[str, dict]:
-    """The maintainer check per owner/repo: stars and recent outside merges."""
     record = json.loads((RESULTS / "survey" / "maintainers.json").read_text())
     return {r["repo"]: r for r in record["repos"]}
 
@@ -149,7 +147,6 @@ def stars() -> dict[str, int]:
 
 
 def headline_records() -> dict[str, dict]:
-    """The latest paired run per repo in results/headline."""
     records = {}
     for path in (RESULTS / "headline").glob("*.json"):
         record = json.loads(path.read_text())
@@ -205,11 +202,8 @@ def shipped(record: dict) -> float:
 
 
 def compare_models() -> str:
-    """Per repo, each against the original on an L4: each model as the agent and as one
-    blind patch (the same model with and without the loop), and the direct fix as a
-    reference; then the geometric means and harmful changes shipped over the repos all
-    of them ran. A stronger-model agent run whose report was lost keeps its later final
-    pair."""
+    """Each repo against the original on an L4: both models with and without the loop,
+    plus the direct fix as a reference. A lost agent report falls back to its final pair."""
     sol_model = MODELS["gpt-6.1-sol"].name
     sol = latest("agent", sol_model)
     for path in (RESULTS / "final-pairs").glob("*.json"):

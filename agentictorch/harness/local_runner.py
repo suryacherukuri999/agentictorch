@@ -1,12 +1,9 @@
-"""Measurement runs on this machine's own GPU, for people who have one.
+"""Measurement runs on this machine's own GPU, with the same harness and pairing as Modal.
 
-The same harness and the same pairing as the Modal runner, without containers. Each
-target gets its own Python environment, made with uv on first use from the Modal
-image's torch and the target's packages; datasets live in a local folder; and every
-run starts from a fresh copy of the working copy. System packages listed under
-[image] apt are not installed. Repo code runs directly on this machine, so use it for
-code you trust, or run AgenticTorch inside a container.
-"""
+Each target gets its own uv environment (the Modal image's torch plus its packages),
+datasets live in a local folder, and every run starts from a fresh copy of the code.
+System packages aren't installed. Repo code runs directly on this machine, so keep it
+to code you trust."""
 
 import os
 import platform
@@ -38,8 +35,7 @@ def measure(
     profile: bool = False,
     verbose: bool = False,
 ) -> list[dict]:
-    """Run one working copy once per seed. `gpu` and `verbose` keep the Modal runner's
-    signature; the run uses whatever GPU this machine has."""
+    """Run one working copy once per seed, on whatever GPU this machine has."""
     job = Job(repo_dir, extra_args)
     return [_run(target, job, seed, steps=steps, warmup=warmup, profile=profile) for seed in seeds]
 

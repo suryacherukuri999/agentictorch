@@ -94,12 +94,9 @@ def ab(
     seeds: tuple[int, ...] = (0, 1),
     verbose: bool = False,
 ) -> tuple[list[dict], list[dict]]:
-    """Run baseline and candidate in the same container, one container per seed.
-
-    The order alternates between seeds, so neither configuration always runs
-    second on a GPU the other has just warmed up. On a GPU type whose requests
-    Modal serves with more than one model, every run goes in one container.
-    """
+    """Run baseline and candidate in the same container, one container per seed, alternating
+    the order so neither always runs on a GPU the other just warmed up. On a GPU type Modal
+    serves with more than one model, all the runs share one container."""
     orders = [[base, cand] if i % 2 == 0 else [cand, base] for i in range(len(seeds))]
     if gpu in MIXED_POOLS:
         jobs = [

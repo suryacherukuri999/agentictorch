@@ -1,15 +1,46 @@
 # AgenticTorch
 
-An agent that finds and fixes slow PyTorch training code in real open-source repos.
-It proves every fix by rerunning the training on a GPU: a change is kept only if
-it is faster beyond run-to-run noise and the loss stays the same.
+AgenticTorch is an AI agent that finds slow PyTorch training code and fixes it. It
+profiles a repo's real training run, tries one change at a time, and keeps a change
+only when a rerun on a GPU shows it is faster and the loss hasn't moved.
+
+On 15 popular open-source repos it made training up to 3.90x faster, with 10 of the 15
+sped up on an A100. Given the same model, the loop beat letting that model patch the
+code blind: 2.36x against 1.92x on average with gpt-6.1-sol and 1.48x against 1.31x
+with the smaller gpt-6-luna, and the blind patches shipped 3 and 6 harmful changes
+where the agent shipped none.
 
 ## Results
 
 Every number below comes from a run saved in `results/`, and
-`python -m agentictorch.scoreboard` rebuilds these tables. Each one compares a repo's
-original code with the changed code in pairs: both run in the same container on the
-same GPU, once per seed (two seeds), for 50 measured steps after 10 warm-up steps.
+`python -m agentictorch.scoreboard` rebuilds the tables. A few terms used throughout:
+
+- **Speedup** is the original step time divided by the new one. 2.00x means each
+  training step takes half as long; 1.00x means no change.
+- **Paired runs:** the original and the changed code run in the same container on the
+  same GPU, once per seed (two seeds), in alternating order, for 50 measured steps
+  after 10 warm-up steps. The speedup is the geometric mean of the per-pair ratios.
+- **Loss within noise:** the changed code's final loss passes a two-sample t-test
+  against the run-to-run spread, so the change didn't alter what the model learns
+  over the measured steps.
+- **Kept:** the agent keeps a change only if it is at least 3% faster in every pair and
+  the loss is within noise. Anything else, including a crash, is undone.
+- **Harmful:** a change that crashed, slowed training or moved the loss. A blind patch
+  ships whatever it does; in averages a crash counts as 1.00x.
+- **Geometric mean** is the average used for speedups. They are ratios, and it keeps one
+  big win from hiding the rest.
+- **L4 and A100** are the GPUs. Speedups are only compared on the same GPU type.
+
+### Where it was tested
+
+Every measurement ran on Modal. Development and all the comparisons used an NVIDIA L4
+(24 GB); the headline table used A100-40GB requests, which Modal sometimes served with
+an 80 GB or PCIe card, and both sides of a pair always shared one card. Each container
+had 8 CPU cores and 16 GB of memory and ran Debian with Python 3.12, PyTorch 2.14.1 and
+torchvision 0.29.1, plus each repo's own packages at a pinned commit. The agent, the
+code edits and the keep rule ran on macOS with Python 3.12, calling OpenAI's
+gpt-6-luna and gpt-6.1-sol; the planted test suite also used a 9B model through
+Ollama. All runs date from October 2026.
 
 ### The agent on 15 real repos
 
@@ -35,78 +66,16 @@ kept a change, the original and the changed code were measured again on an A100:
 | [lucidrains/transfusion-pytorch](https://github.com/lucidrains/transfusion-pytorch) | 1,408 | L4 | 85.3 |  | nothing kept |  |  | not sent |
 | [lucidrains/x-transformers](https://github.com/lucidrains/x-transformers) | 5,961 | L4 | 717.8 |  | nothing kept |  |  | drafted from the gpt-6.1-sol run, not sent |
 
-- **GPU** is the card Modal assigned to an A100-40GB request; every request was
-  billed as an A100-40GB. Both sides of a pair always ran on the same card.
-- **SimCLR:** the same changes were 2.06x faster on an L4. On the A100 the GPU work
-  shrank until image augmentation on 8 CPU cores set the pace (data wait rose from
-  4% to 36% of each step). PyTorch-YOLOv3 shows the same effect more mildly: 2.07x
-  on an L4, 1.81x on the A100, with 39% of each A100 step waiting on data.
-- **Nothing kept** means every change the agent tried crashed, was slower, or was
-  within noise, so the original code stands.
-- **Pull requests:** none sent yet. 11 of the 15 repos haven't merged a pull request
-  from outside their team in the last 12 months.
+"Nothing kept" means every change the agent tried crashed, was slower or was within
+noise, so the original code stands. The GPU column is the card Modal assigned to an
+A100-40GB request, billed as an A100-40GB; both sides of a pair always ran on the same
+card. SimCLR shows how much the GPU matters: its changes were 2.06x faster on an L4,
+but on the A100 the GPU work shrank until image augmentation on 8 CPU cores set the
+pace (data wait rose from 4% to 36% of each step). PyTorch-YOLOv3 shows the same
+effect more mildly, 2.07x on an L4 and 1.81x on the A100.
 
-### Against the reference model working directly
-
-The same repos fixed by the reference model at max effort, editing each repo itself: it
-read the code and the profiles and measured its attempts with the same paired
-benchmark (up to three per repo, each bundling several changes), but outside the
-agent loop. On an L4, as a reference for how much the agent with gpt-6-luna leaves on
-the table:
-
-| Repo | GPU | Original (ms/step) | Agent | Agent's changes | Reference model, direct | Its changes |
-|---|---|---|---|---|---|---|
-| efficient-kan | L4 | 17.3 | 3.40x | DataLoader workers with pinned memory, torch.compile | 4.30x | loader workers with pinned memory, no per-step syncs, CUDA graphs through torch.compile, fused AdamW |
-| x-transformers | L4 | 707.7 | nothing kept |  | 4.13x | batches built on the CPU and copied once, flash attention, bf16 |
-| rectified-flow-pytorch | L4 | 439.4 | 1.17x | DataLoader workers with pinned memory | 3.12x | bf16, torch.compile through accelerate, loader workers |
-| pointnet2 | L4 | 274.0 | 1.65x | no sync per point in farthest point sampling | 2.61x | no syncs in farthest point sampling and grouping, sampling replayed from a CUDA graph, topk instead of a full sort, accuracy kept on the GPU |
-| simclr | L4 | 416.6 | 2.06x | bf16 autocast, channels_last | 2.44x | bf16 autocast, channels_last, cudnn autotuning, pinned copies, no per-step epoch-loss sync |
-| pytorch-ddpm | L4 | 549.2 | 1.29x | bf16 autocast for the forward pass and loss | 2.28x | bf16 autocast, compiled trainer, fused EMA update, one loss sync, pinned copies |
-| pytorch-yolov3 | L4 | 529.2 | 2.07x | bf16 autocast, persistent DataLoader workers, fused Adam | 2.28x | bf16 forward with a float32 loss, channels_last convolutions, persistent workers, fewer syncs in the loss |
-| jointbert | L4 | 137.9 | 2.65x | bf16 autocast, fused AdamW, torch.compile with CUDA graphs | 2.20x | bf16 autocast, fused AdamW, no per-step loss sync |
-| pytorch-wgan | L4 | 77.9 | 1.18x | DataLoader workers with pinned memory | 2.17x | loader workers with pinned memory, noise sampled on the GPU, no generator gradients in critic steps, one sync per printed line, fused Adam, cudnn autotuning, bf16 networks with float32 outputs |
-| pytorch-gan-dcgan | L4 | 28.6 | 2.03x | DataLoader workers with pinned memory | 2.10x | loader workers with pinned memory, noise sampled on the GPU, one sync for the printed losses, fused Adam, cudnn autotuning |
-| vit-pytorch | L4 | 26.7 | 1.37x | DataLoader workers with pinned memory, fused Adam | 1.74x | loader workers, torch.compile, one sync for the printed losses |
-| transfusion-pytorch | L4 | 92.5 | nothing kept |  | 1.55x | loader workers, compiled transformer forward |
-| nerf-pytorch | L4 | 191.7 | 1.18x | TF32 matmuls | 1.30x | TF32, no per-step host copies or syncs, ray sampling on the GPU |
-| ganilla | L4 | 123.2 | nothing kept |  | 1.13x | compiled networks, cudnn autotuning, pinned non-blocking input copies |
-| detr | L4 | 195.4 | nothing kept |  | 1.06x | one sync for logging, box checks on the GPU, matcher indices copied once, pinned copies, 8 workers, bf16 forward |
-
-With the standard fixes (mixed precision, DataLoader workers, fused optimizers),
-the agent came within 10% of the direct fix or beat it on JointBERT, PyTorch-GAN,
-PyTorch-YOLOv3 and nerf-pytorch. It fell far short where the win needed a bigger or
-riskier change, such as flash attention behind a library flag (x-transformers),
-compiling library code (rectified-flow, pytorch-ddpm, transfusion), or bf16 in a GAN
-whose gradient penalty takes a second backward pass (pytorch-wgan).
-
-### Against simpler setups
-
-On the five GPU-bound repos, all with gpt-6-luna on an L4. **rules** applies a few
-AST rules (DataLoader workers, explicit syncs in the loop); **llm** has the model
-read the code and write one patch without running anything; **llm-kb** does the same
-with the documentation search; **agent** is the full loop. A blind patch ships
-whatever it does, so a crash or a slowdown counts as harmful.
-
-| Target | rules | llm | llm-kb | agent |
-|---|---|---|---|---|
-| ganilla | 1.00x | 0.95x harmful | 1.46x | 1.00x |
-| jointbert | 1.00x | 1.66x | 1.70x | 2.65x |
-| nerf-pytorch | 1.00x | 2.49x | 2.55x | 1.18x |
-| pytorch-ddpm | 1.00x | 1.37x | 1.00x harmful | 1.29x |
-| simclr | 1.00x | 1.62x | 1.11x | 2.06x |
-
-| Setup | Targets | Speedup (geometric mean) | Harmful changes shipped | Harmful attempts caught |
-|---|---|---|---|---|
-| rules | 5 | 1.00x | 0 |  |
-| llm | 5 | 1.54x | 1 |  |
-| llm-kb | 5 | 1.48x | 1 |  |
-| agent | 5 | 1.53x | 0 | 3 |
-
-Measuring didn't raise the typical speedup here; it removed the harm. The blind
-patches were bolder: on nerf-pytorch, compiling the model and running the whole
-render in bf16 gave about 2.5x, where the agent kept only TF32. But blind patching
-also shipped a slowdown on ganilla and a crash on pytorch-ddpm. The agent shipped
-neither, and its keep rule caught three harmful attempts of its own.
+No pull requests have been sent yet. 11 of the 15 repos haven't merged a pull request
+from outside their team in the last 12 months.
 
 ### Same model, with and without the loop
 
@@ -231,21 +200,85 @@ DETR resisted everyone. At batch size 2, Python overhead per op sets the pace;
 neither agent run kept a change, the blind patch's dynamic-shape compile timed out,
 and the best of three direct attempts measured 1.06x.
 
-- **Lost reports:** on pytorch-ddpm and rectified-flow-pytorch, the monthly GPU
-  budget guard stopped the gpt-6.1-sol agent run's final measurement before it wrote
-  a report. Their numbers come from measuring the kept changes against the original
-  again, in pairs (`results/final-pairs/`).
-- **Late direct fixes:** for efficient-kan, PyTorch-GAN and pytorch-wgan the direct
-  fix was at first only the one-line DataLoader fix from the go/no-go check. The full
-  direct fixes in the table came after the agent runs, with their reports at hand;
-  the pytorch-wgan one borrows gpt-6.1-sol's idea of skipping the generator's
-  gradients in critic steps.
-- **Cost:** an agent run with gpt-6.1-sol cost $0.05 to $0.09 of API credit and a
-  one-patch run $0.026 to $0.15; every gpt-6-luna call in the project cost $0.09 in
-  total. All are priced from the token usage the API reported, cache discount
-  included (`results/checks/llm_spend.txt`). The first six gpt-6.1-sol agent runs
-  saved no cached-token counts, so the four of them with reports price every prompt
-  token at the full rate ($0.44 to $0.76 each).
+On pytorch-ddpm and rectified-flow-pytorch, the monthly GPU
+budget guard stopped the gpt-6.1-sol agent run's final measurement before it wrote
+a report. Their numbers come from measuring the kept changes against the original
+again, in pairs (`results/final-pairs/`).
+
+For efficient-kan, PyTorch-GAN and pytorch-wgan the direct
+fix was at first only the one-line DataLoader fix from the go/no-go check. The full
+direct fixes in the table came after the agent runs, with their reports at hand;
+the pytorch-wgan one borrows gpt-6.1-sol's idea of skipping the generator's
+gradients in critic steps.
+
+An agent run with gpt-6.1-sol cost $0.05 to $0.09 of API credit and a
+one-patch run $0.026 to $0.15; every gpt-6-luna call in the project cost $0.09 in
+total. All are priced from the token usage the API reported, cache discount
+included (`results/checks/llm_spend.txt`). The first six gpt-6.1-sol agent runs
+saved no cached-token counts, so the four of them with reports price every prompt
+token at the full rate ($0.44 to $0.76 each).
+
+### Against the reference model working directly
+
+The same repos fixed by the reference model at max effort, editing each repo itself: it
+read the code and the profiles and measured its attempts with the same paired
+benchmark (up to three per repo, each bundling several changes), but outside the
+agent loop. On an L4, as a reference for how much the agent with gpt-6-luna leaves on
+the table:
+
+| Repo | GPU | Original (ms/step) | Agent | Agent's changes | Reference model, direct | Its changes |
+|---|---|---|---|---|---|---|
+| efficient-kan | L4 | 17.3 | 3.40x | DataLoader workers with pinned memory, torch.compile | 4.30x | loader workers with pinned memory, no per-step syncs, CUDA graphs through torch.compile, fused AdamW |
+| x-transformers | L4 | 707.7 | nothing kept |  | 4.13x | batches built on the CPU and copied once, flash attention, bf16 |
+| rectified-flow-pytorch | L4 | 439.4 | 1.17x | DataLoader workers with pinned memory | 3.12x | bf16, torch.compile through accelerate, loader workers |
+| pointnet2 | L4 | 274.0 | 1.65x | no sync per point in farthest point sampling | 2.61x | no syncs in farthest point sampling and grouping, sampling replayed from a CUDA graph, topk instead of a full sort, accuracy kept on the GPU |
+| simclr | L4 | 416.6 | 2.06x | bf16 autocast, channels_last | 2.44x | bf16 autocast, channels_last, cudnn autotuning, pinned copies, no per-step epoch-loss sync |
+| pytorch-ddpm | L4 | 549.2 | 1.29x | bf16 autocast for the forward pass and loss | 2.28x | bf16 autocast, compiled trainer, fused EMA update, one loss sync, pinned copies |
+| pytorch-yolov3 | L4 | 529.2 | 2.07x | bf16 autocast, persistent DataLoader workers, fused Adam | 2.28x | bf16 forward with a float32 loss, channels_last convolutions, persistent workers, fewer syncs in the loss |
+| jointbert | L4 | 137.9 | 2.65x | bf16 autocast, fused AdamW, torch.compile with CUDA graphs | 2.20x | bf16 autocast, fused AdamW, no per-step loss sync |
+| pytorch-wgan | L4 | 77.9 | 1.18x | DataLoader workers with pinned memory | 2.17x | loader workers with pinned memory, noise sampled on the GPU, no generator gradients in critic steps, one sync per printed line, fused Adam, cudnn autotuning, bf16 networks with float32 outputs |
+| pytorch-gan-dcgan | L4 | 28.6 | 2.03x | DataLoader workers with pinned memory | 2.10x | loader workers with pinned memory, noise sampled on the GPU, one sync for the printed losses, fused Adam, cudnn autotuning |
+| vit-pytorch | L4 | 26.7 | 1.37x | DataLoader workers with pinned memory, fused Adam | 1.74x | loader workers, torch.compile, one sync for the printed losses |
+| transfusion-pytorch | L4 | 92.5 | nothing kept |  | 1.55x | loader workers, compiled transformer forward |
+| nerf-pytorch | L4 | 191.7 | 1.18x | TF32 matmuls | 1.30x | TF32, no per-step host copies or syncs, ray sampling on the GPU |
+| ganilla | L4 | 123.2 | nothing kept |  | 1.13x | compiled networks, cudnn autotuning, pinned non-blocking input copies |
+| detr | L4 | 195.4 | nothing kept |  | 1.06x | one sync for logging, box checks on the GPU, matcher indices copied once, pinned copies, 8 workers, bf16 forward |
+
+With the standard fixes (mixed precision, DataLoader workers, fused optimizers),
+the agent came within 10% of the direct fix or beat it on JointBERT, PyTorch-GAN,
+PyTorch-YOLOv3 and nerf-pytorch. It fell far short where the win needed a bigger or
+riskier change, such as flash attention behind a library flag (x-transformers),
+compiling library code (rectified-flow, pytorch-ddpm, transfusion), or bf16 in a GAN
+whose gradient penalty takes a second backward pass (pytorch-wgan).
+
+### Against simpler setups
+
+On the five GPU-bound repos, all with gpt-6-luna on an L4. **rules** applies a few
+AST rules (DataLoader workers, explicit syncs in the loop); **llm** has the model
+read the code and write one patch without running anything; **llm-kb** does the same
+with the documentation search; **agent** is the full loop. A blind patch ships
+whatever it does, so a crash or a slowdown counts as harmful.
+
+| Target | rules | llm | llm-kb | agent |
+|---|---|---|---|---|
+| ganilla | 1.00x | 0.95x harmful | 1.46x | 1.00x |
+| jointbert | 1.00x | 1.66x | 1.70x | 2.65x |
+| nerf-pytorch | 1.00x | 2.49x | 2.55x | 1.18x |
+| pytorch-ddpm | 1.00x | 1.37x | 1.00x harmful | 1.29x |
+| simclr | 1.00x | 1.62x | 1.11x | 2.06x |
+
+| Setup | Targets | Speedup (geometric mean) | Harmful changes shipped | Harmful attempts caught |
+|---|---|---|---|---|
+| rules | 5 | 1.00x | 0 |  |
+| llm | 5 | 1.54x | 1 |  |
+| llm-kb | 5 | 1.48x | 1 |  |
+| agent | 5 | 1.53x | 0 | 3 |
+
+Measuring didn't raise the typical speedup here; it removed the harm. The blind
+patches were bolder: on nerf-pytorch, compiling the model and running the whole
+render in bf16 gave about 2.5x, where the agent kept only TF32. But blind patching
+also shipped a slowdown on ganilla and a crash on pytorch-ddpm. The agent shipped
+neither, and its keep rule caught three harmful attempts of its own.
 
 ### Planted test suite
 
@@ -256,6 +289,74 @@ With a local 9B model (ornith-1.5 through Ollama), the agent won back all of a 2
 DataLoader slowdown (2.56x) and 92% of a 2.23x fp32 slowdown (2.03x). The local
 model was too slow for the real repos: Ollama serves it one request at a time, so
 three agents queued 4 to 12 minutes for each turn.
+
+## Try it
+
+You need Python 3.12, [uv](https://docs.astral.sh/uv/), a GPU (a
+[Modal](https://modal.com) account, or an NVIDIA GPU of your own) and a model: an
+OpenAI API key, a Gemini key, or a local model through [Ollama](https://ollama.com).
+The runs above used OpenAI's gpt-6-luna and gpt-6.1-sol.
+
+Set up once, from a clone of this repo:
+
+```
+uv sync
+uv run modal setup                              # Modal login; opens a browser
+export OPENAI_API_KEY=...                       # or put it in ~/agentictorch-work/.env
+uv run python -m agentictorch.kb.fetch          # download the performance docs
+uv run python -m agentictorch.kb.search build   # build the local search index
+```
+
+Then run the agent on one of the 15 repos in `targets/`:
+
+```
+uv run agentictorch download pytorch-ddpm       # its dataset, once
+uv run agentictorch run pytorch-ddpm --setup agent --model gpt-6.1-sol
+```
+
+A run measures the original code, profiles it, and then tries up to five changes,
+each measured against the best version so far. When it finishes you get a report in
+`results/eval/agent/pytorch-ddpm/` with every change, its measured effect, the final
+diff and the docs the agent read, and the edited code in
+`~/agentictorch-work/work/pytorch-ddpm/`, a git copy where each kept change is a
+commit. With gpt-6.1-sol a run costs $0.05 to $0.09 of API credit plus some GPU time.
+
+`--model` takes any model in `agentictorch/agent/models.py`. `--setup llm` has the
+model write one patch without measuring, for comparison. `measure` and `profile` show
+a repo's speed and where its time goes without changing anything.
+
+To try it on your own repo, add a config at `targets/<name>/target.toml`:
+
+```toml
+repo = "https://github.com/you/your-repo"      # or a local git folder
+commit = "a1b2c3d"                              # pinned, so every run uses the same code
+command = "python train.py --config base.yaml"  # your usual training command
+
+[image]
+pip = ["timm", "einops"]                        # packages beyond PyTorch
+
+[data]                                          # optional
+dataset = "my-data"                             # folder name in Modal storage
+path = "data"                                   # where your code expects it
+download = "python scripts/download.py"         # how to fetch it, once
+```
+
+Then run `agentictorch download <name>`, `agentictorch measure <name>` to check that
+the harness can time it, and `agentictorch run <name>`. The repo needs a PyTorch
+training run that starts with one command on one GPU and steps a `torch.optim`
+optimizer. The harness loads at startup, so your code doesn't change. Small fixes the
+repo needs to run on current PyTorch go in `targets/<name>/compat.patch`; reports list
+them apart from the speed changes.
+
+To measure on your own NVIDIA GPU instead of Modal, add `--backend local` to
+`download`, `measure`, `profile`, `ab` or `run`. Each target then gets its own Python
+environment under `~/agentictorch-work/envs` (the Modal image's torch plus the
+target's packages), datasets go to `~/agentictorch-work/local-data`, and the paired
+runs alternate on that one GPU. The repo's code runs directly on the machine, so use
+it for code you trust, or run AgenticTorch inside a container.
+
+`python -m agentictorch.survey` reruns the static scan of popular PyTorch repos that
+started the project (`results/survey/`).
 
 ## How it works
 
@@ -328,44 +429,6 @@ and resolved PyTorch GitHub issues about performance, split into sections with
 their URLs. Search is BM25 plus `bge-small-en-v1.5` embeddings, fused with
 reciprocal rank fusion and reranked with `bge-reranker-base`, all local. On a
 15-query check (symptom to the section that explains the fix), 14 find it.
-
-## How to run
-
-Needs Python 3.12, [uv](https://docs.astral.sh/uv/), a [Modal](https://modal.com)
-account for the GPU runs, and a model: a local one through
-[Ollama](https://ollama.com), or an API key for Gemini or OpenAI in the
-environment.
-
-```
-uv sync
-python -m modal setup                         # once
-python -m agentictorch.kb.fetch               # download the docs
-python -m agentictorch.kb.search build        # build the search index
-
-agentictorch download pytorch-ddpm            # dataset into a Modal volume, once
-agentictorch measure pytorch-ddpm             # baseline on an L4, two seeds
-agentictorch profile pytorch-ddpm             # profiler summary
-agentictorch run pytorch-ddpm --setup agent --model gpt-6-luna
-```
-
-Models are listed in `agentictorch/agent/models.py`; keys are read from the environment
-or `~/agentictorch-work/.env`.
-
-Each target repo is a small config in `targets/<name>/target.toml`: the repo, a
-pinned commit, the training command, extra pip packages and the dataset. `--setup`
-picks what runs: `rules` (a few AST rules), `llm` (the model reads the code and
-patches it once without measuring), `llm-kb` (the same with the docs), or `agent`.
-`python -m agentictorch.scoreboard` compares the setups over everything in `results/`.
-
-To measure on your own NVIDIA GPU instead of Modal, add `--backend local` to
-`download`, `measure`, `profile`, `ab` or `run`. Each target then gets its own Python
-environment under `~/agentictorch-work/envs` (the Modal image's torch plus the
-target's packages), datasets go to `~/agentictorch-work/local-data`, and the paired
-runs alternate on that one GPU. The repo's code runs directly on the machine, so use
-it for code you trust, or run AgenticTorch inside a container.
-
-`python -m agentictorch.survey` rebuilds the static scan of popular PyTorch repos that
-motivated the project (`results/survey/`).
 
 ## Limitations
 
