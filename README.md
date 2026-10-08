@@ -14,7 +14,7 @@ same GPU, once per seed (two seeds), for 50 measured steps after 10 warm-up step
 ### The agent on 15 real repos
 
 The agent ran with gpt-6-luna, a small OpenAI model; every gpt-6-luna call in the
-project, all setups included, cost $0.08 of API credit. For each repo where it
+project, all setups included, cost $0.09 of API credit. For each repo where it
 kept a change, the original and the changed code were measured again on an A100:
 
 | Repo | Stars | GPU | Before (ms/step) | After (ms/step) | Speedup | Loss | Fixes | Pull request |
@@ -110,43 +110,55 @@ neither, and its keep rule caught three harmful attempts of its own.
 
 ### Same model, with and without the loop
 
-Each repo fixed four ways, each measured against the original code on an L4; 1.00x
+Each repo fixed five ways, each measured against the original code on an L4; 1.00x
 means nothing was kept:
 - **Agent, gpt-6.1-sol:** the full loop with the stronger model.
 - **One patch, gpt-6.1-sol:** the same model without the loop (the `llm` setup). It
   reads the code and writes one patch without running anything, and the patch ships
   whatever it does.
-- **Agent, gpt-6-luna:** the full loop with the small model, at a twentieth of the
-  price per token.
+- **Agent, gpt-6-luna** and **One patch, gpt-6-luna:** the same pair with the small
+  model, at a twentieth of the price per token.
 - **Reference model, direct:** the fixes from the section above. A different model
   working directly, with measurements, so a reference rather than a test of the loop.
 
-| Repo | Agent, gpt-6.1-sol | One patch, gpt-6.1-sol | Agent, gpt-6-luna | Reference model, direct |
-|---|---|---|---|---|
-| detr | 1.00x | 1.00x harmful | 1.00x | 1.06x |
-| efficient-kan | 3.58x | 2.17x | 3.40x | 4.30x |
-| ganilla | 1.34x | 1.54x | 1.00x | 1.13x |
-| jointbert | 2.72x | 3.05x | 2.65x | 2.20x |
-| nerf-pytorch | 2.43x | 2.71x | 1.18x | 1.30x |
-| pointnet2 | 4.89x | 1.93x | 1.65x | 2.61x |
-| pytorch-ddpm | 2.54x | 2.52x | 1.29x | 2.28x |
-| pytorch-gan-dcgan | 2.15x | 1.93x | 2.03x | 2.10x |
-| pytorch-wgan | 1.41x | 1.59x | 1.18x | 2.17x |
-| pytorch-yolov3 | 2.10x | 0.60x harmful | 2.07x | 2.28x |
-| rectified-flow-pytorch | 3.13x | 3.17x | 1.17x | 3.12x |
-| simclr | 2.39x | 2.50x | 2.06x | 2.44x |
-| transfusion-pytorch | 1.58x | 0.86x harmful | 1.00x | 1.55x |
-| vit-pytorch | 2.43x | 1.80x | 1.37x | 1.74x |
-| x-transformers | 5.52x | 5.61x | 1.00x | 4.13x |
-| **Geometric mean** | **2.36x** | **1.92x** | **1.48x** | **2.12x** |
-| Harmful changes shipped | 0 | 3 | 0 | 0 |
+| Repo | Agent, gpt-6.1-sol | One patch, gpt-6.1-sol | Agent, gpt-6-luna | One patch, gpt-6-luna | Reference model, direct |
+|---|---|---|---|---|---|
+| detr | 1.00x | 1.00x harmful | 1.00x | 0.97x | 1.06x |
+| efficient-kan | 3.58x | 2.17x | 3.40x | 3.39x | 4.30x |
+| ganilla | 1.34x | 1.54x | 1.00x | 0.95x harmful | 1.13x |
+| jointbert | 2.72x | 3.05x | 2.65x | 1.66x | 2.20x |
+| nerf-pytorch | 2.43x | 2.71x | 1.18x | 2.49x | 1.30x |
+| pointnet2 | 4.89x | 1.93x | 1.65x | 1.00x harmful | 2.61x |
+| pytorch-ddpm | 2.54x | 2.52x | 1.29x | 1.37x | 2.28x |
+| pytorch-gan-dcgan | 2.15x | 1.93x | 2.03x | 2.05x | 2.10x |
+| pytorch-wgan | 1.41x | 1.59x | 1.18x | 1.00x harmful | 2.17x |
+| pytorch-yolov3 | 2.10x | 0.60x harmful | 2.07x | 0.78x harmful | 2.28x |
+| rectified-flow-pytorch | 3.13x | 3.17x | 1.17x | 1.13x | 3.12x |
+| simclr | 2.39x | 2.50x | 2.06x | 1.62x | 2.44x |
+| transfusion-pytorch | 1.58x | 0.86x harmful | 1.00x | 0.88x harmful | 1.55x |
+| vit-pytorch | 2.43x | 1.80x | 1.37x | 1.26x | 1.74x |
+| x-transformers | 5.52x | 5.61x | 1.00x | 1.00x harmful | 4.13x |
+| **Geometric mean** | **2.36x** | **1.92x** | **1.48x** | **1.31x** | **2.12x** |
+| Harmful changes shipped | 0 | 3 | 0 | 6 | 0 |
 
-**The loop beat the same model used directly.** The agent's geometric mean was 2.36x
-against 1.92x for one blind patch, and it shipped no harm where the blind patch
-shipped three: PyTorch-YOLOv3 at 0.60x (cuDNN autotuning and torch.compile, on batch
-shapes that keep changing), transfusion-pytorch at 0.86x (bf16 on a transformer too
-small to gain from it), and DETR, whose compiled patch timed out. The agent was
-ahead on 6 repos, level on 4 and behind on 5.
+**The loop beat the same model used directly, with both models.** With gpt-6.1-sol
+the agent's geometric mean was 2.36x against 1.92x for one blind patch, and it
+shipped no harm where the blind patch shipped three: PyTorch-YOLOv3 at 0.60x (cuDNN
+autotuning and torch.compile, on batch shapes that keep changing),
+transfusion-pytorch at 0.86x (bf16 on a transformer too small to gain from it), and
+DETR, whose compiled patch timed out. The agent was ahead on 6 repos, level on 4 and
+behind on 5.
+
+The small model needed the loop more. With gpt-6-luna the agent reached 1.48x
+against 1.31x, ahead on 10 repos, level on 3 and behind on 2: nerf-pytorch, where the
+blind patch compiled the networks and ran the render in bf16, and pytorch-ddpm, where
+it added bf16 with fused Adam, pinned copies and cuDNN autotuning. Its blind patches
+shipped six harmful changes: two crashes (torch.compile on pytorch-wgan, which can't
+take the gradient penalty's second backward pass, and DataLoader workers on
+x-transformers, whose dataset builds CUDA tensors), a loss change on PointNet++, and
+slowdowns on PyTorch-YOLOv3 (0.78x), transfusion-pytorch (0.88x) and ganilla
+(0.95x). The agent tried some of the same changes; its quick check or keep rule
+caught them.
 
 **Measuring one change at a time leaves gains behind.** The blind patch bundles
 every change the model is confident about. The agent keeps a change only if it is
@@ -229,7 +241,7 @@ and the best of three direct attempts measured 1.06x.
   the pytorch-wgan one borrows gpt-6.1-sol's idea of skipping the generator's
   gradients in critic steps.
 - **Cost:** an agent run with gpt-6.1-sol cost $0.05 to $0.09 of API credit and a
-  one-patch run $0.026 to $0.15; every gpt-6-luna call in the project cost $0.08 in
+  one-patch run $0.026 to $0.15; every gpt-6-luna call in the project cost $0.09 in
   total. All are priced from the token usage the API reported, cache discount
   included (`results/checks/llm_spend.txt`). The first six gpt-6.1-sol agent runs
   saved no cached-token counts, so the four of them with reports price every prompt
