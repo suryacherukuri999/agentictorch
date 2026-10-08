@@ -357,6 +357,13 @@ picks what runs: `rules` (a few AST rules), `llm` (the model reads the code and
 patches it once without measuring), `llm-kb` (the same with the docs), or `agent`.
 `python -m agentictorch.scoreboard` compares the setups over everything in `results/`.
 
+To measure on your own NVIDIA GPU instead of Modal, add `--backend local` to
+`download`, `measure`, `profile`, `ab` or `run`. Each target then gets its own Python
+environment under `~/agentictorch-work/envs` (the Modal image's torch plus the
+target's packages), datasets go to `~/agentictorch-work/local-data`, and the paired
+runs alternate on that one GPU. The repo's code runs directly on the machine, so use
+it for code you trust, or run AgenticTorch inside a container.
+
 `python -m agentictorch.survey` rebuilds the static scan of popular PyTorch repos that
 motivated the project (`results/survey/`).
 
@@ -380,6 +387,8 @@ motivated the project (`results/survey/`).
   blind patch from the same model beat it that way on five repos. With gpt-6-luna it
   also rarely attempted the bigger changes, such as switching on flash attention or
   compiling a library's code; gpt-6.1-sol did.
+- The local backend has only been tested in CPU mode, on our own test scripts.
+  Every result above ran on Modal.
 - Python only. The tools search and edit the repo's Python code, and the profiler
   maps time to Python lines. A compiled C++/CUDA extension shows up only as GPU
   kernels under the Python line that calls it, and there's no step to rebuild one

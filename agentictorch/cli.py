@@ -23,6 +23,17 @@ def gpu_type(name: str) -> str | None:
     return None if name == "cpu" else name
 
 
+def backend(name: str):
+    """Where measurements run: Modal containers, or this machine's own GPU."""
+    if name == "local":
+        from agentictorch.harness import local_runner
+
+        return local_runner
+    from agentictorch.harness import modal_runner
+
+    return modal_runner
+
+
 def load_target(name: str) -> targets.Target:
     if name.startswith("bench-"):
         return bench.target(bench.case(name.removeprefix("bench-")))
@@ -55,17 +66,13 @@ def cmd_clone(args) -> None:
 
 
 def cmd_download(args) -> None:
-    from agentictorch.harness import modal_runner
-
-    print(modal_runner.download(load_target(args.target)))
+    print(backend(args.backend).download(load_target(args.target)))
 
 
 def cmd_measure(args) -> None:
-    from agentictorch.harness import modal_runner
-
     target = load_target(args.target)
     repo = working_copy(target, args.label)
-    runs = modal_runner.measure(
+    runs = backend(args.backend).measure(
         target,
         repo,
         gpu=gpu_type(args.gpu),
@@ -80,11 +87,9 @@ def cmd_measure(args) -> None:
 
 
 def cmd_profile(args) -> None:
-    from agentictorch.harness import modal_runner
-
     target = load_target(args.target)
     repo = working_copy(target, args.label)
-    [run] = modal_runner.measure(
+    [run] = backend(args.backend).measure(
         target,
         repo,
         gpu=gpu_type(args.gpu),
@@ -100,13 +105,13 @@ def cmd_profile(args) -> None:
 
 
 def cmd_ab(args) -> None:
-    from agentictorch.harness import modal_runner
+    from agentictorch.harness.runner import Job
 
     target = load_target(args.target)
-    base_runs, cand_runs = modal_runner.ab(
+    base_runs, cand_runs = backend(args.backend).ab(
         target,
-        modal_runner.Job(working_copy(target, args.baseline), args.base_args),
-        modal_runner.Job(working_copy(target, args.candidate), args.cand_args),
+        Job(working_copy(target, args.baseline), args.base_args),
+        Job(working_copy(target, args.candidate), args.cand_args),
         gpu=gpu_type(args.gpu),
         verbose=args.verbose,
     )
@@ -130,7 +135,12 @@ def cmd_run(args) -> None:
     who = "rules" if args.setup == "rules" else args.model
     label = f"{args.setup}-{who}-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}"
     session = Session(
-        target, working_copy(target, label), gpu=gpu_type(args.gpu), rounds=args.rounds, label=label
+        target,
+        working_copy(target, label),
+        gpu=gpu_type(args.gpu),
+        rounds=args.rounds,
+        label=label,
+        backend=args.backend,
     )
     if args.setup == "rules":
         changes = rules.apply(session.repo)
@@ -207,11 +217,13 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--label", default="baseline")
     p.set_defaults(func=cmd_clone)
 
-    p = sub.add_parser("download", help="download a target's dataset into the Modal volume")
+    p = sub.add_parser("download", help="download a target's dataset, once")
     p.add_argument("target", choices=target_names())
+    p.add_argument("--backend", default="modal", choices=["modal", "local"],
+                   help="where measurements run: Modal, or this machine's own GPU")  # fmt: skip
     p.set_defaults(func=cmd_download)
 
-    p = sub.add_parser("measure", help="measure a working copy on Modal, once per seed")
+    p = sub.add_parser("measure", help="measure a working copy, once per seed")
     p.add_argument("target", choices=target_names())
     p.add_argument("--label", default="baseline")
     p.add_argument("--gpu", default="L4")
@@ -219,15 +231,19 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--steps", type=int)
     p.add_argument("--warmup", type=int)
     p.add_argument("--verbose", action="store_true")
+    p.add_argument("--backend", default="modal", choices=["modal", "local"],
+                   help="where measurements run: Modal, or this machine's own GPU")  # fmt: skip
     p.set_defaults(func=cmd_measure)
 
-    p = sub.add_parser("profile", help="profile a short run of a working copy on Modal")
+    p = sub.add_parser("profile", help="profile a short run of a working copy")
     p.add_argument("target", choices=target_names())
     p.add_argument("--label", default="baseline")
     p.add_argument("--gpu", default="L4")
     p.add_argument("--extra-args", default="", help="appended to the target's command")
     p.add_argument("--steps", type=int, default=10)
     p.add_argument("--verbose", action="store_true")
+    p.add_argument("--backend", default="modal", choices=["modal", "local"],
+                   help="where measurements run: Modal, or this machine's own GPU")  # fmt: skip
     p.set_defaults(func=cmd_profile)
 
     p = sub.add_parser("ab", help="run two working copies in the same containers and compare")
@@ -238,6 +254,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--cand-args", default="", help="appended to the candidate's command")
     p.add_argument("--gpu", default="L4")
     p.add_argument("--verbose", action="store_true")
+    p.add_argument("--backend", default="modal", choices=["modal", "local"],
+                   help="where measurements run: Modal, or this machine's own GPU")  # fmt: skip
     p.set_defaults(func=cmd_ab)
 
     p = sub.add_parser("run", help="let the agent find and fix slow training code")
@@ -246,6 +264,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--model", default="ornith-9b")
     p.add_argument("--gpu", default="L4")
     p.add_argument("--rounds", type=int, default=5)
+    p.add_argument("--backend", default="modal", choices=["modal", "local"],
+                   help="where measurements run: Modal, or this machine's own GPU")  # fmt: skip
     p.set_defaults(func=cmd_run)
 
     p = sub.add_parser("record", help="save the latest paired comparison under results/")

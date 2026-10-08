@@ -14,12 +14,21 @@ import signal
 import subprocess
 import tempfile
 import time
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from agentictorch.profile import summary
 
 INJECT_DIR = Path(__file__).parent / "inject"
+
+
+@dataclass(frozen=True)
+class Job:
+    """One configuration: a working copy, plus arguments that switch on its changes."""
+
+    repo_dir: Path
+    extra_args: str = ""
+    seed: int | None = None  # overrides the run's seed for this job
 
 
 def run(

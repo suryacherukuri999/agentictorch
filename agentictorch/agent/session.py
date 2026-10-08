@@ -15,8 +15,8 @@ from pathlib import Path
 
 from agentictorch import workspace
 from agentictorch.agent.keep import Verdict, decide
-from agentictorch.harness import modal_runner
-from agentictorch.harness.modal_runner import Job
+from agentictorch.harness import local_runner, modal_runner
+from agentictorch.harness.runner import Job
 from agentictorch.measurement import Measurement
 from agentictorch.targets import Target
 from agentictorch.tools.files import ToolError
@@ -43,12 +43,19 @@ class Attempt:
 
 class Session:
     def __init__(
-        self, target: Target, repo: Path, gpu: str = "L4", rounds: int = 5, label: str = "agent"
+        self,
+        target: Target,
+        repo: Path,
+        gpu: str = "L4",
+        rounds: int = 5,
+        label: str = "agent",
+        backend: str = "modal",
     ):
         self.target = target
         self.repo = repo
         self.label = label  # names the raw runs saved for each pair
         self.gpu = gpu
+        self.runner = local_runner if backend == "local" else modal_runner
         self.rounds = rounds
         self.original = self._git("rev-parse", "HEAD").strip()
         self.attempts: list[Attempt] = []
@@ -65,13 +72,13 @@ class Session:
 
     def measure_baseline(self) -> Measurement:
         with self._exported("HEAD") as best:
-            self.baseline = Measurement(modal_runner.measure(self.target, best, gpu=self.gpu))
+            self.baseline = Measurement(self.runner.measure(self.target, best, gpu=self.gpu))
         return self.baseline
 
     def profile(self) -> str:
         """Profile the best version so far in a short run."""
         with self._exported("HEAD") as best:
-            [run] = modal_runner.measure(
+            [run] = self.runner.measure(
                 self.target, best, gpu=self.gpu, seeds=(0,), steps=10, profile=True
             )
         text = run.get("profile_text") or f"profiling failed: {Measurement([run]).failure()}"
@@ -86,7 +93,7 @@ class Session:
         if not self.diff():
             raise ToolError(NO_CHANGE)
         self._check_syntax()
-        [run] = modal_runner.measure(
+        [run] = self.runner.measure(
             self.target,
             self.repo,
             gpu=self.gpu,
@@ -109,7 +116,7 @@ class Session:
             raise ToolError(NO_CHANGE)
         self._check_syntax()
         with self._exported("HEAD") as best:
-            base, cand = modal_runner.ab(self.target, Job(best), Job(self.repo), gpu=self.gpu)
+            base, cand = self.runner.ab(self.target, Job(best), Job(self.repo), gpu=self.gpu)
         round_label = f"{self.label}-round{len(self.attempts) + 1}"
         workspace.save_ab(self.target, f"{self.label}-best", round_label, base, cand, "", "")
         base, cand = Measurement(base), Measurement(cand)
@@ -129,7 +136,7 @@ class Session:
     def final(self) -> Attempt:
         """The original code against everything kept, as one last pair."""
         with self._exported(self.original) as original, self._exported("HEAD") as best:
-            base, cand = modal_runner.ab(self.target, Job(original), Job(best), gpu=self.gpu)
+            base, cand = self.runner.ab(self.target, Job(original), Job(best), gpu=self.gpu)
         workspace.save_ab(self.target, "original", f"{self.label}-final", base, cand, "", "")
         base, cand = Measurement(base), Measurement(cand)
         diff = self._git("diff", self.original, "HEAD")

@@ -16,13 +16,14 @@ import subprocess
 import tarfile
 import time
 import uuid
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from pathlib import Path
 
 import modal
 
 from agentictorch import costs
 from agentictorch.harness import runner
+from agentictorch.harness.runner import Job
 from agentictorch.targets import Target
 
 # These runs need a few GB of GPU memory; bigger GPUs only spend the credits faster.
@@ -55,15 +56,6 @@ def image_for(target: Target) -> modal.Image:
     if target.pip:
         image = image.uv_pip_install(*target.pip)
     return image.add_local_python_source("agentictorch")
-
-
-@dataclass(frozen=True)
-class Job:
-    """One configuration: a working copy, plus arguments that switch on its changes."""
-
-    repo_dir: Path
-    extra_args: str = ""
-    seed: int | None = None  # overrides the container's seed for this job
 
 
 def measure(
