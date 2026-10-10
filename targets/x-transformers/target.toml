@@ -1,6 +1,5 @@
 # x-transformers (lucidrains): the repo's train_enwik8.py example, a 6-layer decoder on
-# enwik8, which ships with the repo. A pull request target: the maintainer merged outside
-# pull requests in the last 12 months (results/survey/maintainers.json).
+# enwik8, which ships with the repo.
 repo = "https://github.com/lucidrains/x-transformers"
 commit = "2a00ece2d8fc4f00299a34f1523bb6a5cf2300a7"
 command = "python train_enwik8.py"

@@ -1,7 +1,7 @@
 """Measurement runs on Modal.
 
 Only the measurement runs happen on Modal; the LLM calls, code edits and the
-keep/revert logic stay on the Mac. Each target gets its own image (a shared
+keep/revert logic stay on this machine. Each target gets its own image (a shared
 torch base plus the repo's dependencies), datasets live in a Volume, and the
 current working copy of the repo is uploaded with every run. Every call gets a
 fresh container; `ab` runs a baseline and a candidate in the same container so
@@ -25,7 +25,7 @@ from agentictorch.harness import runner
 from agentictorch.harness.runner import Job
 from agentictorch.targets import Target
 
-# An A100-40GB request has run on 40GB, 80GB and PCIe cards, billed as A100-40GB.
+# An A100-40GB request has run on 40GB, 80GB and PCIe cards.
 # A pair split over two containers could land on two GPU models, so it runs in one.
 MIXED_POOLS = {"A100-40GB"}
 CPU_CORES = 8.0

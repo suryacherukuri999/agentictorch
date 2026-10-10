@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 GPU_EVENTS = {"kernel", "gpu_memcpy", "gpu_memset"}
-# .item(), .cpu() and friends end in one of these, so counting them counts syncs.
+# .item(), .cpu() and similar calls end in one of these, so counting them counts syncs.
 SYNC_CALLS = {"cudaDeviceSynchronize", "cudaStreamSynchronize", "cudaEventSynchronize"}
 TOP = 8
 TOP_SYNC_SITES = 6

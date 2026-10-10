@@ -1,6 +1,4 @@
 # transfusion-pytorch (lucidrains): the repo's train_image_only.py example, on MNIST.
-# A pull request target: the maintainer merged outside pull requests in the last
-# 12 months (results/survey/maintainers.json).
 repo = "https://github.com/lucidrains/transfusion-pytorch"
 commit = "a0a094966727684b8b42367c23494d98b159bdde"
 command = "python train_image_only.py"

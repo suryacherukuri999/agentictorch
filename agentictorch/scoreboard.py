@@ -157,7 +157,7 @@ def headline_records() -> dict[str, dict]:
 
 
 def hand_fixes() -> dict[str, dict]:
-    """The fastest measured hand fix per repo, from results/hand and the go/no-go check."""
+    """The fastest measured hand fix per repo, from results/hand and results/go-no-go."""
     best = {}
     for path in [*(RESULTS / "hand").glob("*.json"), *(RESULTS / "go-no-go").glob("*.json")]:
         record = json.loads(path.read_text())
@@ -248,7 +248,6 @@ def headline() -> str:
     prs_path = RESULTS / "prs.json"
     prs = json.loads(prs_path.read_text()) if prs_path.exists() else {}
     known = stars()
-    checked = maintainers()
     lines = [
         "| Repo | Stars | GPU | Before (ms/step) | After (ms/step) | Speedup | Loss | Fixes "
         "| Pull request |",
@@ -271,7 +270,7 @@ def headline() -> str:
             speedup,
             loss,
             r["change"],
-            prs.get(target) or _not_sent(checked.get(repo)),
+            prs.get(target) or "not sent",
         ]
         lines.append("| " + " | ".join(cells) + " |")
     # Repos where the agent kept nothing have no headline run, but they belong in the table.
@@ -289,7 +288,7 @@ def headline() -> str:
             "nothing kept",
             "",
             "",
-            prs.get(target) or _not_sent(checked.get(repo)),
+            prs.get(target) or "not sent",
         ]
         lines.append("| " + " | ".join(cells) + " |")
     return "\n".join(lines)
@@ -310,12 +309,6 @@ def models() -> str:
     ]
     lines.append("| Harmful attempts caught | " + " | ".join(map(str, caught)) + " |")
     return "\n".join(lines)
-
-
-def _not_sent(check: dict | None) -> str:
-    if check and check["outside_merges_12_months"] == 0:
-        return "not sent: no outside pull request merged in 12 months"
-    return "not sent"
 
 
 if __name__ == "__main__":

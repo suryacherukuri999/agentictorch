@@ -1,4 +1,4 @@
-"""Local copies of target repos and their run results, kept outside the synced project folder.
+"""Local copies of target repos and their run results, kept in ~/agentictorch-work.
 
 The pristine clone is never edited. Each experiment gets its own working copy,
 with the target's compatibility patch committed on top so that `git diff`

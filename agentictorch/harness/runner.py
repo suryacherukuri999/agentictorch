@@ -1,6 +1,6 @@
 """Run a training command with the harness injected and collect its results.
 
-This runs on the Mac (CPU checks of our own scripts) and inside Modal
+This runs on this machine (the tests and the local backend) and inside Modal
 containers, so it uses only the standard library.
 """
 

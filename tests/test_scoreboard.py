@@ -73,7 +73,7 @@ def test_headline_table_uses_the_latest_run_per_repo(tmp_path, monkeypatch):
     assert "1,234" in rows[0] and "A100-SXM4-40GB" in rows[0]
     assert "| 105.0 | 65.0 | 1.60x | within noise | bf16 autocast | not sent |" in rows[0]
     assert "| 99 |" in rows[1] and "1.01x (1.01x is within noise)" in rows[1]
-    assert rows[1].endswith("| not sent: no outside pull request merged in 12 months |")
+    assert rows[1].endswith("| not sent |")
 
 
 def test_headline_table_lists_repos_where_the_agent_kept_nothing(tmp_path, monkeypatch):

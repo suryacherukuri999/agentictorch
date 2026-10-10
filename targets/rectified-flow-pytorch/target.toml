@@ -1,6 +1,5 @@
 # rectified-flow-pytorch (lucidrains): the repo's train_oxford.py example, a Unet on
-# Oxford Flowers through the library's Trainer. A pull request target: the maintainer
-# merged outside pull requests in the last 12 months (results/survey/maintainers.json).
+# Oxford Flowers through the library's Trainer.
 repo = "https://github.com/lucidrains/rectified-flow-pytorch"
 commit = "688cad582422f807adffb32ab8f8bf511fec1e89"
 command = "HF_HOME=hf HF_HUB_OFFLINE=1 HF_DATASETS_OFFLINE=1 python train_oxford.py"
