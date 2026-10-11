@@ -188,3 +188,7 @@ def test_compare_models_counts_harmful_blind_patches_and_averages(tmp_path, monk
         "| **Geometric mean** | **1.59x** | **1.22x** | **1.23x** | **1.10x** | **2.00x** |"
     )
     assert lines[5] == "| Harmful changes shipped | 0 | 1 | 0 | 1 | 0 |"
+
+    gain = scoreboard.loop_gain().splitlines()
+    assert gain[2] == "| gpt-6.1-sol | 1.59x | 1.22x | 1.30x | 0, 1 |"
+    assert gain[3] == "| gpt-6-luna | 1.23x | 1.10x | 1.13x | 0, 1 |"

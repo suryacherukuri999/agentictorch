@@ -201,9 +201,9 @@ def shipped(record: dict) -> float:
     return record["speedup"] if kept else 1.0
 
 
-def compare_models() -> str:
-    """Each repo against the original on an L4: both models with and without the loop,
-    plus the direct fix as a reference. A lost agent report falls back to its final pair."""
+def _comparison() -> tuple[list[tuple[str, dict, bool]], list[str]]:
+    """Each approach as (header, runs, blind), and the real repos all of them ran.
+    A lost agent report falls back to its final pair."""
     sol_model = MODELS["gpt-6.1-sol"].name
     sol = latest("agent", sol_model)
     for path in (RESULTS / "final-pairs").glob("*.json"):
@@ -218,7 +218,17 @@ def compare_models() -> str:
         (DIRECT, hand_fixes(), False),
     ]
     common = set.intersection(*(set(runs) for _, runs, _ in columns))
-    targets = sorted(t for t in common if not t.startswith("bench-"))
+    return columns, sorted(t for t in common if not t.startswith("bench-"))
+
+
+def _ships(runs: dict, blind: bool, target: str) -> tuple[float, bool]:
+    return outcome(runs[target], "llm") if blind else (shipped(runs[target]), False)
+
+
+def compare_models() -> str:
+    """Each repo against the original on an L4: both models with and without the loop,
+    plus the direct fix as a reference."""
+    columns, targets = _comparison()
     lines = [
         "| Repo | " + " | ".join(header for header, _, _ in columns) + " |",
         "|---" * (len(columns) + 1) + "|",
@@ -227,9 +237,7 @@ def compare_models() -> str:
     for target in targets:
         cells = []
         for i, (_, runs, blind) in enumerate(columns):
-            speedup, harm = (
-                outcome(runs[target], "llm") if blind else (shipped(runs[target]), False)
-            )
+            speedup, harm = _ships(runs, blind, target)
             speedups[i].append(speedup)
             harmful[i] += harm
             cells.append(f"{speedup:.2f}x" + (" harmful" if harm else ""))
@@ -238,6 +246,23 @@ def compare_models() -> str:
         means = " | ".join(f"**{geometric_mean(s):.2f}x**" for s in speedups)
         lines.append(f"| **Geometric mean** | {means} |")
         lines.append("| Harmful changes shipped | " + " | ".join(map(str, harmful)) + " |")
+    return "\n".join(lines)
+
+
+def loop_gain() -> str:
+    """Per model, the agent against its own one blind patch over the same repos. The
+    ratio of the geometric means is also the geometric mean of the per-repo ratios."""
+    columns, targets = _comparison()
+    lines = [
+        "| Model | Agent | One patch | Agent vs one patch | Harmful changes (agent, one patch) |",
+        "|---|---|---|---|---|",
+    ]
+    for model, agent, patch in (("gpt-6.1-sol", *columns[0:2]), ("gpt-6-luna", *columns[2:4])):
+        a = [_ships(agent[1], agent[2], t) for t in targets]
+        p = [_ships(patch[1], patch[2], t) for t in targets]
+        ga, gp = geometric_mean(x for x, _ in a), geometric_mean(x for x, _ in p)
+        harm = f"{sum(h for _, h in a)}, {sum(h for _, h in p)}"
+        lines.append(f"| {model} | {ga:.2f}x | {gp:.2f}x | {ga / gp:.2f}x | {harm} |")
     return "\n".join(lines)
 
 
@@ -325,3 +350,5 @@ if __name__ == "__main__":
     print(versus())
     print()
     print(compare_models())
+    print()
+    print(loop_gain())
