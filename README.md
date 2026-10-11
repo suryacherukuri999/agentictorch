@@ -124,6 +124,17 @@ stronger baseline.
 | **Geometric mean** | **2.36x** | **1.92x** | **1.48x** | **1.31x** | **2.12x** |
 | Harmful changes shipped | 0 | 3 | 0 | 6 | 0 |
 
+Side by side for each model:
+
+| Model | Agent | One patch | Agent vs one patch | Harmful changes (agent, one patch) |
+|---|---|---|---|---|
+| gpt-6.1-sol | 2.36x | 1.92x | 1.23x | 0, 3 |
+| gpt-6-luna | 1.48x | 1.31x | 1.13x | 0, 6 |
+
+On a typical repo the agent was 1.23x faster than the same model's blind patch with
+gpt-6.1-sol and 1.13x faster with gpt-6-luna, and it shipped no harmful change where
+the blind patches shipped 3 and 6.
+
 The loop beat the same model patching blind, with both models. With gpt-6.1-sol
 the agent's geometric mean was 2.36x against 1.92x for one blind patch, and it
 shipped no harm where the blind patch shipped three: PyTorch-YOLOv3 at 0.60x (cuDNN
