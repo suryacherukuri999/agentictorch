@@ -42,6 +42,11 @@ code edits and the keep rule ran on macOS with Python 3.12, calling OpenAI's
 gpt-6-luna and gpt-6.1-sol; the planted test suite also used a 9B model through
 Ollama. All runs date from October 2026.
 
+After the final cleanup of the code, two runs were repeated as a check, saved in
+`results/reruns/`. The gpt-6.1-sol agent on PointNet++ kept the same three changes and
+measured 4.94x (4.89x in the tables below), and the gpt-6-luna agent on PyTorch-GAN
+measured 2.04x (2.03x).
+
 ### The agent on 15 real repos
 
 The agent ran with gpt-6-luna, a small OpenAI model. For each repo where it kept a
@@ -49,19 +54,19 @@ change, the original and the changed code were measured again on an A100:
 
 | Repo | Stars | GPU | Before (ms/step) | After (ms/step) | Speedup | Loss | Fixes | Pull request |
 |---|---|---|---|---|---|---|---|---|
-| [monologg/JointBERT](https://github.com/monologg/JointBERT) | 749 | A100-SXM4-40GB | 67.4 | 17.3 | 3.90x | within noise | bf16 autocast, fused AdamW, torch.compile with CUDA graphs | not sent: no outside pull request merged in 12 months |
-| [Blealtan/efficient-kan](https://github.com/Blealtan/efficient-kan) | 4,660 | A100-SXM4-40GB | 13.7 | 4.0 | 3.42x | within noise | DataLoader workers with pinned memory, torch.compile | not sent: no outside pull request merged in 12 months |
-| [yanx27/Pointnet_Pointnet2_pytorch](https://github.com/yanx27/Pointnet_Pointnet2_pytorch) | 4,967 | A100-SXM4-40GB | 235.4 | 108.3 | 2.17x | within noise | no sync per point in farthest point sampling | not sent: no outside pull request merged in 12 months |
-| [yenchenlin/nerf-pytorch](https://github.com/yenchenlin/nerf-pytorch) | 6,058 | A100-SXM4-80GB | 80.8 | 39.4 | 2.05x | within noise | TF32 matmuls | not sent: no outside pull request merged in 12 months |
-| [eriklindernoren/PyTorch-GAN](https://github.com/eriklindernoren/PyTorch-GAN) | 17,457 | A100-SXM4-40GB | 24.5 | 12.0 | 2.04x | within noise | DataLoader workers with pinned memory | not sent: no outside pull request merged in 12 months |
-| [eriklindernoren/PyTorch-YOLOv3](https://github.com/eriklindernoren/PyTorch-YOLOv3) | 7,436 | A100-SXM4-40GB | 265.4 | 146.4 | 1.81x | within noise | bf16 autocast, persistent DataLoader workers, fused Adam | not sent: no outside pull request merged in 12 months |
-| [Zeleni9/pytorch-wgan](https://github.com/Zeleni9/pytorch-wgan) | 809 | A100-SXM4-40GB | 39.5 | 28.7 | 1.38x | within noise | DataLoader workers with pinned memory | not sent: no outside pull request merged in 12 months |
+| [monologg/JointBERT](https://github.com/monologg/JointBERT) | 749 | A100-SXM4-40GB | 67.4 | 17.3 | 3.90x | within noise | bf16 autocast, fused AdamW, torch.compile with CUDA graphs | not sent |
+| [Blealtan/efficient-kan](https://github.com/Blealtan/efficient-kan) | 4,660 | A100-SXM4-40GB | 13.7 | 4.0 | 3.42x | within noise | DataLoader workers with pinned memory, torch.compile | not sent |
+| [yanx27/Pointnet_Pointnet2_pytorch](https://github.com/yanx27/Pointnet_Pointnet2_pytorch) | 4,967 | A100-SXM4-40GB | 235.4 | 108.3 | 2.17x | within noise | no sync per point in farthest point sampling | not sent |
+| [yenchenlin/nerf-pytorch](https://github.com/yenchenlin/nerf-pytorch) | 6,058 | A100-SXM4-80GB | 80.8 | 39.4 | 2.05x | within noise | TF32 matmuls | not sent |
+| [eriklindernoren/PyTorch-GAN](https://github.com/eriklindernoren/PyTorch-GAN) | 17,457 | A100-SXM4-40GB | 24.5 | 12.0 | 2.04x | within noise | DataLoader workers with pinned memory | not sent |
+| [eriklindernoren/PyTorch-YOLOv3](https://github.com/eriklindernoren/PyTorch-YOLOv3) | 7,436 | A100-SXM4-40GB | 265.4 | 146.4 | 1.81x | within noise | bf16 autocast, persistent DataLoader workers, fused Adam | not sent |
+| [Zeleni9/pytorch-wgan](https://github.com/Zeleni9/pytorch-wgan) | 809 | A100-SXM4-40GB | 39.5 | 28.7 | 1.38x | within noise | DataLoader workers with pinned memory | not sent |
 | [lucidrains/vit-pytorch](https://github.com/lucidrains/vit-pytorch) | 25,553 | A100-SXM4-80GB | 19.8 | 15.8 | 1.22x | within noise | DataLoader workers with pinned memory, fused Adam | drafted, not sent |
-| [w86763777/pytorch-ddpm](https://github.com/w86763777/pytorch-ddpm) | 646 | A100-SXM4-40GB | 144.7 | 118.3 | 1.22x | within noise | bf16 autocast for the forward pass and loss | not sent: no outside pull request merged in 12 months |
+| [w86763777/pytorch-ddpm](https://github.com/w86763777/pytorch-ddpm) | 646 | A100-SXM4-40GB | 144.7 | 118.3 | 1.22x | within noise | bf16 autocast for the forward pass and loss | not sent |
 | [lucidrains/rectified-flow-pytorch](https://github.com/lucidrains/rectified-flow-pytorch) | 489 | A100 80GB PCIe | 245.9 | 202.3 | 1.22x | within noise | DataLoader workers with pinned memory | issue drafted, not sent |
-| [Spijkervet/SimCLR](https://github.com/Spijkervet/SimCLR) | 825 | A100-SXM4-40GB | 178.1 | 175.8 | 1.01x (1.01x is within noise) | within noise | bf16 autocast, channels_last | not sent: no outside pull request merged in 12 months |
-| [facebookresearch/detr](https://github.com/facebookresearch/detr) | 15,352 | L4 | 205.0 |  | nothing kept |  |  | not sent: no outside pull request merged in 12 months |
-| [giddyyupp/ganilla](https://github.com/giddyyupp/ganilla) | 482 | L4 | 130.5 |  | nothing kept |  |  | not sent: no outside pull request merged in 12 months |
+| [Spijkervet/SimCLR](https://github.com/Spijkervet/SimCLR) | 825 | A100-SXM4-40GB | 178.1 | 175.8 | 1.01x (1.01x is within noise) | within noise | bf16 autocast, channels_last | not sent |
+| [facebookresearch/detr](https://github.com/facebookresearch/detr) | 15,352 | L4 | 205.0 |  | nothing kept |  |  | not sent |
+| [giddyyupp/ganilla](https://github.com/giddyyupp/ganilla) | 482 | L4 | 130.5 |  | nothing kept |  |  | not sent |
 | [lucidrains/transfusion-pytorch](https://github.com/lucidrains/transfusion-pytorch) | 1,408 | L4 | 85.3 |  | nothing kept |  |  | not sent |
 | [lucidrains/x-transformers](https://github.com/lucidrains/x-transformers) | 5,961 | L4 | 717.8 |  | nothing kept |  |  | drafted from the gpt-6.1-sol run, not sent |
 
@@ -89,6 +94,16 @@ means nothing was kept:
 - **Reference model, direct:** the fixes from the section above. A different model
   working directly, with measurements, so a reference rather than a test of the loop.
 
+The agent and the one patch start from the same information: the training command,
+the same tools for reading and editing code, and the same hints from a static scan of
+the code (likely problems such as a DataLoader on the main thread or a sync in the
+loop, with file and line). What the one patch lacks is everything that comes from
+running the code (the profile, the quick check and the paired benchmarks) and the
+docs search, which made no difference to blind patches in a smaller test below
+(1.54x without it, 1.48x with it). So the comparison is mostly about what measuring
+adds. The hints point the one patch at real problems, which if anything makes it the
+stronger baseline.
+
 | Repo | Agent, gpt-6.1-sol | One patch, gpt-6.1-sol | Agent, gpt-6-luna | One patch, gpt-6-luna | Reference model, direct |
 |---|---|---|---|---|---|
 | detr | 1.00x | 1.00x harmful | 1.00x | 0.97x | 1.06x |
@@ -109,7 +124,7 @@ means nothing was kept:
 | **Geometric mean** | **2.36x** | **1.92x** | **1.48x** | **1.31x** | **2.12x** |
 | Harmful changes shipped | 0 | 3 | 0 | 6 | 0 |
 
-**The loop beat the same model used directly, with both models.** With gpt-6.1-sol
+The loop beat the same model patching blind, with both models. With gpt-6.1-sol
 the agent's geometric mean was 2.36x against 1.92x for one blind patch, and it
 shipped no harm where the blind patch shipped three: PyTorch-YOLOv3 at 0.60x (cuDNN
 autotuning and torch.compile, on batch shapes that keep changing),
@@ -128,7 +143,7 @@ slowdowns on PyTorch-YOLOv3 (0.78x), transfusion-pytorch (0.88x) and ganilla
 (0.95x). The agent tried some of the same changes; its quick check or keep rule
 caught them.
 
-**Measuring one change at a time leaves gains behind.** The blind patch bundles
+Measuring one change at a time does leave gains behind. The blind patch bundles
 every change the model is confident about. The agent keeps a change only if it is
 at least 3% faster in every pair on its own, so gains that are small alone, or that
 only pay off together, get dropped. On JointBERT the agent tried ignore-index labels
@@ -139,7 +154,7 @@ the agent measured fused Adam and removing the debug-check syncs alone as within
 noise (1.00x to 1.04x) and reverted them; the blind patch kept them with the rest:
 2.71x against 2.43x.
 
-**The model sets the ceiling.** gpt-6.1-sol was faster than gpt-6-luna on 14 of the
+The model sets the ceiling. gpt-6.1-sol was faster than gpt-6-luna on 14 of the
 15 repos, by more than 10% on 10 of them, and tied on DETR. Most of the gap is
 torch.compile: gpt-6.1-sol got it working on 9 repos, gpt-6-luna on 2, and gpt-6-luna
 never tried it on five others. gpt-6.1-sol also kept bf16 on 8 repos to gpt-6-luna's
@@ -149,7 +164,7 @@ on x-transformers' existing flash attention option, replacing vit-pytorch's
 hand-written attention with PyTorch's fused `scaled_dot_product_attention`, and a
 Triton kernel for PointNet++.
 
-**The reference model** reached 2.12x working directly. The agent with
+The reference model reached 2.12x working directly. The agent with
 gpt-6.1-sol was ahead of it on 7 repos, level on 4 and behind on 4; the agent with
 gpt-6-luna was behind (1.48x). Three of the direct fixes were made after the agent
 runs (below).
@@ -200,14 +215,13 @@ neither agent run kept a change, the blind patch's dynamic-shape compile timed o
 and the best of three direct attempts measured 1.06x.
 
 On pytorch-ddpm and rectified-flow-pytorch, the gpt-6.1-sol agent run stopped before
-its final measurement and wrote no report. Their numbers come from measuring the kept changes against the original
-again, in pairs (`results/final-pairs/`).
+its final measurement and wrote no report. Their numbers come from measuring the kept
+changes against the original again, in pairs (`results/final-pairs/`).
 
-For efficient-kan, PyTorch-GAN and pytorch-wgan the direct
-fix was at first only the one-line DataLoader fix from the go/no-go check. The full
-direct fixes in the table came after the agent runs, with their reports at hand;
-the pytorch-wgan one borrows gpt-6.1-sol's idea of skipping the generator's
-gradients in critic steps.
+For efficient-kan, PyTorch-GAN and pytorch-wgan, the direct fix was at first only the
+one-line DataLoader fix from an early sanity check. The full direct fixes in the table
+came after the agent runs, with their reports at hand; the pytorch-wgan one borrows
+gpt-6.1-sol's idea of skipping the generator's gradients in critic steps.
 
 ### Against the reference model working directly
 
@@ -244,10 +258,11 @@ whose gradient penalty takes a second backward pass (pytorch-wgan).
 
 ### Against simpler setups
 
-On the five GPU-bound repos, all with gpt-6-luna on an L4. **rules** applies a few
-AST rules (DataLoader workers, explicit syncs in the loop); **llm** has the model
-read the code and write one patch without running anything; **llm-kb** does the same
-with the documentation search; **agent** is the full loop. A blind patch ships
+On the five GPU-bound repos, all with gpt-6-luna on an L4. `rules` applies a few AST
+rules (DataLoader workers, explicit syncs in the loop), `llm` has the model read the
+code and write one patch without running anything (with the same static hints as the
+agent), `llm-kb` does the same with the documentation search, and `agent` is the full
+loop. A blind patch ships
 whatever it does, so a crash or a slowdown counts as harmful.
 
 | Target | rules | llm | llm-kb | agent |
@@ -275,7 +290,8 @@ neither, and its keep rule caught three harmful attempts of its own.
 
 Small scripts of our own (ResNet-18 on CIFAR-10, a character-level GPT, DistilBERT),
 each with one planted mistake; the planted slowdown is how much faster the clean
-script runs. 6 of the 14 mistakes made no measurable difference on an L4, in speed or memory.
+script runs. 6 of the 14 mistakes made no measurable difference on an L4, in speed or
+memory.
 With a local 9B model (ornith-1.5 through Ollama), the agent won back all of a 2.48x
 DataLoader slowdown (2.56x) and 92% of a 2.23x fp32 slowdown (2.03x). The local
 model was too slow for the real repos: Ollama serves it one request at a time, so
@@ -351,20 +367,28 @@ started the project (`results/survey/`).
 
 ## How it works
 
-```
-  Mac                                         Modal (one container image per repo)
-  ---------------------------------------     ------------------------------------
-  agent loop: an LLM calling tools
-    read_file, search_code, apply_edit        the repo's own training command,
-    search_docs (local index, cited URLs)       run for N steps with a small
-    profile, quick_check, run_benchmark  -->    module injected at startup
-                                         <--  step times, peak memory, losses,
-  keep/revert rule (code, not the model)        profiler summary
-  report: changes, measured effect, diff
+```mermaid
+flowchart LR
+    subgraph local["Your machine"]
+        model["LLM"] <--> agent["Agent loop<br/>reads code, searches docs, edits"]
+        agent --> copy["Working copy (git)"]
+        rule["Keep rule<br/>faster in every pair,<br/>loss within noise"] -- "keep or undo" --> copy
+        rule --> report["Report<br/>changes, measured effect, diff"]
+    end
+    subgraph gpu["GPU: Modal, or your own"]
+        run["The repo's own training command<br/>with the harness injected at startup"]
+        prof["Profiler summary<br/>time and syncs per repo line"]
+    end
+    copy -- "original and edited code, as a pair" --> run
+    run -- "step times, memory, losses" --> rule
+    run --> prof --> agent
 ```
 
+The model only proposes changes. Everything it learns about speed comes from real
+runs, and plain code, not the model, decides what stays.
+
 1. **Baseline.** Run the repo's training command for a few dozen steps, once per
-   seed, on a cloud GPU. Record step time, peak memory and loss.
+   seed, on the GPU. Record step time, peak memory and loss.
 2. **Profile.** A separate short run under the PyTorch profiler, summarized as text:
    GPU busy share, data-loading wait, host-device syncs per step, and the top ops
    by GPU time, each with the repo line that caused it.
@@ -450,21 +474,21 @@ reciprocal rank fusion and reranked with `bge-reranker-base`, all local. On a
 
 ## What didn't work
 
-- **Unpaired runs.** Measuring the baseline and the candidate in separate
-  containers gave up to 40% noise on CPU-bound repos. Pairing fixed it.
-- **Comparing each run with the baseline run of the same seed** for the loss
-  check. On chaotic training (cuDNN autotuning, a high learning rate), two runs
-  with the same seed and code ended 0.1 apart in loss. A pooled t-test replaced it.
-- **The profiler's `with_stack=True`** for line numbers. On PyTorch 2.14 it named
-  frames by their function's `def` line, which is worse than no line for an agent
-  deciding where to edit.
-- **Trusting the data-wait share.** On x-transformers, 61% of each step showed as
+- Unpaired runs. Measuring the baseline and the candidate in separate containers
+  gave up to 40% noise on CPU-bound repos. Pairing fixed it.
+- Comparing each run with the baseline run of the same seed for the loss check. On
+  chaotic training (cuDNN autotuning, a high learning rate), two runs with the same
+  seed and code ended 0.1 apart in loss. A pooled t-test replaced it.
+- The profiler's `with_stack=True` for line numbers. On PyTorch 2.14 it named frames
+  by their function's `def` line, which is worse than no line for an agent deciding
+  where to edit.
+- Trusting the data-wait share. On x-transformers, 61% of each step showed as
   waiting on the DataLoader. The dataset copied each sample to the GPU, which made
   the CPU wait for the GPU inside the loader. Copying whole batches instead cut the
   wait to 0% and left the step time unchanged (1.01x). The profile's GPU-busy
   share (88%) was the real signal.
-- **Trusting the loss check with float16.** The agent kept float16 autocast without
-  a GradScaler on two repos. The loss matched over the measured steps, but without
+- Trusting the loss check with float16. The agent kept float16 autocast without a
+  GradScaler on two repos. The loss matched over the measured steps, but without
   loss scaling small gradients can underflow over a long run. The agent now refuses
   float16 unless the repo uses a GradScaler.
 
