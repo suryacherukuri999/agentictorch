@@ -63,14 +63,6 @@ def save_runs(target: Target, label: str, runs: list[dict]) -> Path:
     return path
 
 
-def load_runs(target: Target, label: str) -> list[dict]:
-    """The most recent runs saved under `label`."""
-    paths = sorted((WORK / "runs" / target.name).glob(f"{label}-*.json"))
-    if not paths:
-        raise FileNotFoundError(f"no runs saved for {target.name} {label}")
-    return json.loads(paths[-1].read_text())["runs"]
-
-
 def save_ab(
     target: Target,
     base: str,

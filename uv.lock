@@ -26,7 +26,6 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "datasets" },
-    { name = "numpy" },
     { name = "pytest" },
     { name = "ruff" },
     { name = "torch" },
@@ -43,7 +42,6 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "datasets", specifier = "==5.1.0" },
-    { name = "numpy", specifier = ">=2" },
     { name = "pytest", specifier = ">=8" },
     { name = "ruff", specifier = ">=0.17" },
     { name = "torch", specifier = ">=2.9" },
