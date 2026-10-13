@@ -4,11 +4,12 @@ AgenticTorch is an AI agent that finds slow PyTorch training code and fixes it. 
 profiles a repo's real training run, tries one change at a time, and keeps a change
 only when a rerun on a GPU shows it is faster and the loss hasn't moved.
 
-On 15 popular open-source repos it made training up to 3.90x faster, with 10 of the 15
-sped up on an A100. Given the same model, the loop beat letting that model patch the
-code blind: 2.36x against 1.92x on average with gpt-6.1-sol and 1.48x against 1.31x
-with the smaller gpt-6-luna, and the blind patches shipped 3 and 6 harmful changes
-where the agent shipped none.
+On 15 popular open-source repos, measured on an NVIDIA L4, the agent with gpt-6.1-sol
+sped up 14 of them, by up to 5.52x. Given the same model, the loop beat letting that
+model patch the code blind: 2.36x against 1.92x on average with gpt-6.1-sol, and 1.48x
+against 1.31x with the smaller gpt-6-luna. The blind patches shipped 3 and 6 harmful
+changes; the agent shipped none. On an A100, gpt-6-luna's changes sped up 10 of the 15
+repos, by up to 3.90x.
 
 ## Results
 
