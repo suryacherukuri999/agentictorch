@@ -132,19 +132,15 @@ Side by side for each model:
 | gpt-6-luna | 1.48x | 1.31x | 1.13x | 0, 6 |
 
 On a typical repo the agent was 1.23x faster than the same model's blind patch with
-gpt-6.1-sol and 1.13x faster with gpt-6-luna, and it shipped no harmful change where
-the blind patches shipped 3 and 6.
+gpt-6.1-sol and 1.13x faster with gpt-6-luna, and it never shipped a harmful change.
 
-The loop beat the same model patching blind, with both models. With gpt-6.1-sol
-the agent's geometric mean was 2.36x against 1.92x for one blind patch, and it
-shipped no harm where the blind patch shipped three: PyTorch-YOLOv3 at 0.60x (cuDNN
-autotuning and torch.compile, on batch shapes that keep changing),
-transfusion-pytorch at 0.86x (bf16 on a transformer too small to gain from it), and
-DETR, whose compiled patch timed out. The agent was ahead on 6 repos, level on 4 and
-behind on 5.
+With gpt-6.1-sol the agent was ahead on 6 repos, level on 4 and behind on 5. The three
+harmful blind patches were PyTorch-YOLOv3 at 0.60x (cuDNN autotuning and
+torch.compile, on batch shapes that keep changing), transfusion-pytorch at 0.86x (bf16
+on a transformer too small to gain from it), and DETR, whose compiled patch timed out.
 
-The small model needed the loop more. With gpt-6-luna the agent reached 1.48x
-against 1.31x, ahead on 10 repos, level on 3 and behind on 2: nerf-pytorch, where the
+The small model needed the loop more. With gpt-6-luna the agent was ahead on 10
+repos, level on 3 and behind on 2: nerf-pytorch, where the
 blind patch compiled the networks and ran the render in bf16, and pytorch-ddpm, where
 it added bf16 with fused Adam, pinned copies and cuDNN autotuning. Its blind patches
 shipped six harmful changes: two crashes (torch.compile on pytorch-wgan, which can't
@@ -338,6 +334,12 @@ each measured against the best version so far. When it finishes you get a report
 diff and the docs the agent read, and the edited code in
 `~/agentictorch-work/work/pytorch-ddpm/`, a git copy where each kept change is a
 commit.
+
+Your own repo is never touched: the agent works on its own clone. To use the result,
+copy the diff at the end of the report into a file and run `git apply` on it in your
+checkout of the commit the target pins. Read it first, and run a full training job
+before trusting precision changes, since the loss check only covers a few dozen
+steps.
 
 `--model` takes any model in `agentictorch/agent/models.py`. `--setup llm` has the
 model write one patch without measuring, for comparison. `measure` and `profile` show
