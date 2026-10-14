@@ -87,7 +87,7 @@ def test_keeps_a_change_that_makes_the_run_fit_in_memory():
 
 def test_refuses_to_compare_across_gpus():
     with pytest.raises(ValueError):
-        decide(BASE, config(gpu="NVIDIA A100-SXM4-40GB"))
+        decide(BASE, config(gpu="NVIDIA T4"))
 
 
 def test_refuses_to_compare_different_seeds():

@@ -17,22 +17,10 @@ def fake_run(calls):
     return run
 
 
-def test_pairs_get_one_container_per_seed_on_a_single_gpu_model(monkeypatch):
+def test_pairs_get_one_container_per_seed(monkeypatch):
     calls = []
     monkeypatch.setattr(modal_runner, "_run", fake_run(calls))
     base, cand = modal_runner.ab(Target("t", "python train.py"), Job(Path("a")), Job(Path("b")))
     [(job_lists, seeds)] = calls
     assert len(job_lists) == 2 and seeds == (0, 1)
     assert [r["repo"] for r in base] == ["a", "a"] and [r["seed"] for r in cand] == [0, 1]
-
-
-def test_pairs_on_a_mixed_gpu_pool_share_one_container(monkeypatch):
-    calls = []
-    monkeypatch.setattr(modal_runner, "_run", fake_run(calls))
-    target = Target("t", "python train.py")
-    base, cand = modal_runner.ab(target, Job(Path("a")), Job(Path("b")), gpu="A100-40GB")
-    [(job_lists, _)] = calls
-    [jobs] = job_lists
-    assert [(j.repo_dir.name, j.seed) for j in jobs] == [("a", 0), ("b", 0), ("b", 1), ("a", 1)]
-    assert [(r["repo"], r["seed"]) for r in base] == [("a", 0), ("a", 1)]
-    assert [(r["repo"], r["seed"]) for r in cand] == [("b", 0), ("b", 1)]

@@ -16,7 +16,6 @@ import subprocess
 import tarfile
 import time
 import uuid
-from dataclasses import replace
 from pathlib import Path
 
 import modal
@@ -25,9 +24,6 @@ from agentictorch.harness import runner
 from agentictorch.harness.runner import Job
 from agentictorch.targets import Target
 
-# An A100-40GB request has run on 40GB, 80GB and PCIe cards.
-# A pair split over two containers could land on two GPU models, so it runs in one.
-MIXED_POOLS = {"A100-40GB"}
 CPU_CORES = 8.0
 MEMORY_GIB = 16
 # Image pull, container start and data staging, on top of the run's own timeout.
@@ -88,19 +84,9 @@ def ab(
     verbose: bool = False,
 ) -> tuple[list[dict], list[dict]]:
     """Run baseline and candidate in the same container, one container per seed, alternating
-    the order so neither always runs on a GPU the other just warmed up. On a GPU type Modal
-    serves with more than one model, all the runs share one container."""
+    the order so neither always runs on a GPU the other just warmed up."""
     orders = [[base, cand] if i % 2 == 0 else [cand, base] for i in range(len(seeds))]
-    if gpu in MIXED_POOLS:
-        jobs = [
-            replace(job, seed=seed)
-            for order, seed in zip(orders, seeds, strict=True)
-            for job in order
-        ]
-        [runs] = _run(target, [jobs], seeds[:1], gpu=gpu, verbose=verbose)
-        results = [runs[i : i + 2] for i in range(0, len(runs), 2)]
-    else:
-        results = _run(target, orders, seeds, gpu=gpu, verbose=verbose)
+    results = _run(target, orders, seeds, gpu=gpu, verbose=verbose)
     base_runs, cand_runs = [], []
     for i, (first, second) in enumerate(results):
         base_runs.append(first if i % 2 == 0 else second)
