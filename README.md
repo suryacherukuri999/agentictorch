@@ -30,7 +30,8 @@ Every number below comes from a run saved in `results/`, and
   ships whatever it does; in averages a crash counts as 1.00x.
 - **Geometric mean** is the average used for speedups. They are ratios, and it keeps one
   big win from hiding the rest.
-- **L4 and A100** are the GPUs. Speedups are only compared on the same GPU type.
+- **GPU:** almost everything ran on an NVIDIA L4; one table re-measures the agent's
+  changes on an A100. Speedups are only compared on the same GPU type.
 
 ### Where it was tested
 
@@ -72,12 +73,13 @@ change, the original and the changed code were measured again on an A100:
 | [lucidrains/x-transformers](https://github.com/lucidrains/x-transformers) | 5,961 | L4 | 717.8 |  | nothing kept |  |  | drafted from the gpt-6.1-sol run, not sent |
 
 "Nothing kept" means every change the agent tried crashed, was slower or was within
-noise, so the original code stands. The GPU column is the card Modal assigned to an
-A100-40GB request, billed as an A100-40GB; both sides of a pair always ran on the same
-card. SimCLR shows how much the GPU matters: its changes were 2.06x faster on an L4,
-but on the A100 the GPU work shrank until image augmentation on 8 CPU cores set the
-pace (data wait rose from 4% to 36% of each step). PyTorch-YOLOv3 shows the same
-effect more mildly, 2.07x on an L4 and 1.81x on the A100.
+noise, so the original code stands; those four rows show the L4 baseline. For the
+others, the GPU column is the card Modal assigned to an A100-40GB request, and both
+sides of a pair always ran on the same card. SimCLR shows how much the GPU matters:
+its changes were 2.06x faster on an L4, but on the A100 the GPU work shrank until
+image augmentation on 8 CPU cores set the pace (data wait rose from 4% to 36% of each
+step). PyTorch-YOLOv3 shows the same effect more mildly, 2.07x on an L4 and 1.81x on
+the A100.
 
 No pull requests have been sent yet. 11 of the 15 repos haven't merged a pull request
 from outside their team in the last 12 months.
@@ -303,7 +305,7 @@ memory.
 With a local 9B model (ornith-1.5 through Ollama), the agent won back all of a 2.48x
 DataLoader slowdown (2.56x) and 92% of a 2.23x fp32 slowdown (2.03x). The local
 model was too slow for the real repos: Ollama serves it one request at a time, so
-three agents queued 4 to 12 minutes for each turn.
+agents running side by side waited minutes for each turn.
 
 ## Try it
 
@@ -429,8 +431,9 @@ repo's code and the repo stays unchanged. It:
 
 ### Paired runs and the keep rule
 
-Containers land on different CPUs and GPUs. For CPU-bound training that alone
-moved step time by 40% between two runs of the same code. So the baseline and the
+Containers land on different CPUs and GPUs. On PyTorch-GAN, which is limited by
+data loading, the same code ran at 19.1 ms per step in one container and 28.9 ms in
+another. So the baseline and the
 candidate run in the same container, one pair per seed, with the order
 alternating, and the speedup is the geometric mean of the per-pair ratios.
 
@@ -488,8 +491,9 @@ reciprocal rank fusion and reranked with `bge-reranker-base`, all local. On a
 
 ## What didn't work
 
-- Unpaired runs. Measuring the baseline and the candidate in separate containers
-  gave up to 40% noise on CPU-bound repos. Pairing fixed it.
+- Unpaired runs. Measuring the baseline and the candidate in separate containers let
+  the container decide the result: the same PyTorch-GAN code ran 51% slower in one
+  container than in another. Pairing fixed it.
 - Comparing each run with the baseline run of the same seed for the loss check. On
   chaotic training (cuDNN autotuning, a high learning rate), two runs with the same
   seed and code ended 0.1 apart in loss. A pooled t-test replaced it.
