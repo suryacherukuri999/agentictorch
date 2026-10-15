@@ -1,0 +1,16 @@
+{
+ "efficient-kan": "DataLoader workers, torch.compile with CUDA graphs, pinned copies",
+ "ganilla": "torch.compile, pinned copies",
+ "jointbert": "bf16 autocast, fused AdamW, torch.compile",
+ "nerf-pytorch": "bf16 for the MLP, torch.compile",
+ "pointnet2": "no syncs in point sampling, a Triton sampling kernel, bf16 convolutions",
+ "pytorch-ddpm": "bf16 autocast, torch.compile, channels_last",
+ "pytorch-gan-dcgan": "DataLoader workers, pinned copies, fused Adam",
+ "pytorch-wgan": "DataLoader workers, no generator gradients in critic steps, cuDNN autotuning, fused Adam",
+ "pytorch-yolov3": "bf16 autocast, channels_last, persistent DataLoader workers",
+ "rectified-flow-pytorch": "DataLoader workers, torch.compile, bf16, fused Adam",
+ "simclr": "bf16 autocast, channels_last, pinned copies",
+ "transfusion-pytorch": "torch.compile",
+ "vit-pytorch": "DataLoader workers, fused attention, torch.compile with CUDA graphs",
+ "x-transformers": "flash attention, bf16, torch.compile, fused Adam"
+}

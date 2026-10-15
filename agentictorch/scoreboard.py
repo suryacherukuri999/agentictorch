@@ -1,5 +1,5 @@
-"""Compare the setups over everything saved in results/eval, and build the README's
-results table from the headline runs in results/headline.
+"""Compare the setups and models over everything saved in results/eval, and build the
+README's results tables.
 
 python -m agentictorch.scoreboard
 
@@ -18,15 +18,13 @@ from agentictorch.agent.models import MODELS
 
 RESULTS = Path(__file__).parent.parent / "results"
 SETUPS = ["rules", "llm", "llm-kb", "agent"]
-# The setups are compared, and the headline runs made, with gpt-6-luna. The planted suite
-# ran with the local model, which turned out too slow for the real repos.
+# The setups were compared with gpt-6-luna. The planted suite ran with the local model,
+# which turned out too slow for the real repos.
 MAIN_MODEL = MODELS["gpt-6-luna"].name
+SOL_MODEL = MODELS["gpt-6.1-sol"].name
 LOCAL_MODEL = MODELS["ornith-9b"].name
 # A blind patch that runs this much slower than the original counts as harmful.
 HARM_MARGIN = 0.97
-# Who made the reference fixes in results/hand: the model editing each repo itself, with
-# the profiler and paired benchmark but outside the agent loop.
-DIRECT = "Reference model, direct"
 
 
 def planted_slowdown(target: str) -> float | None:
@@ -146,76 +144,30 @@ def stars() -> dict[str, int]:
     return found
 
 
-def headline_records() -> dict[str, dict]:
-    records = {}
-    for path in (RESULTS / "headline").glob("*.json"):
-        record = json.loads(path.read_text())
-        previous = records.get(record["target"])
-        if previous is None or record["recorded"] > previous["recorded"]:
-            records[record["target"]] = record
-    return records
-
-
-def hand_fixes() -> dict[str, dict]:
-    """The fastest measured hand fix per repo, from results/hand and results/go-no-go."""
-    best = {}
-    for path in [*(RESULTS / "hand").glob("*.json"), *(RESULTS / "go-no-go").glob("*.json")]:
-        record = json.loads(path.read_text())
-        previous = best.get(record["target"])
-        if previous is None or (record["speedup"] or 0) > (previous["speedup"] or 0):
-            best[record["target"]] = record
-    return best
-
-
-def versus() -> str:
-    """Per real repo: the agent's kept changes and the fastest hand fix, each measured
-    in pairs against the original code on the same kind of GPU."""
-    hands = hand_fixes()
-    agents = latest("agent", MAIN_MODEL)
-    labels = {t: r["change"] for t, r in headline_records().items()}
-    lines = [
-        f"| Repo | GPU | Original (ms/step) | Agent | Agent's changes | {DIRECT} | Its changes |",
-        "|---" * 7 + "|",
-    ]
-    for target in sorted(set(agents) & set(hands), key=lambda t: -hands[t]["speedup"]):
-        agent, hand = agents[target], hands[target]
-        if agent["gpu"] != hand["gpu"]:
-            continue
-        changes = labels.get(target, f"{len(agent['kept'])} changes") if agent["kept"] else ""
-        cells = [
-            target,
-            hand["gpu"].removeprefix("NVIDIA "),
-            f"{mean(run['step_ms'] for run in hand['baseline']):.1f}",
-            f"{agent['speedup']:.2f}x" if agent["kept"] else "nothing kept",
-            changes,
-            f"{hand['speedup']:.2f}x",
-            hand["change"],
-        ]
-        lines.append("| " + " | ".join(cells) + " |")
-    return "\n".join(lines)
-
-
 def shipped(record: dict) -> float:
     """What a run ships: its speedup if the keep rule kept it, else the original's 1.00x."""
     kept = record["keep"] if "keep" in record else bool(record["kept"])
     return record["speedup"] if kept else 1.0
 
 
-def _comparison() -> tuple[list[tuple[str, dict, bool]], list[str]]:
-    """Each approach as (header, runs, blind), and the real repos all of them ran.
-    A lost agent report falls back to its final pair."""
-    sol_model = MODELS["gpt-6.1-sol"].name
-    sol = latest("agent", sol_model)
+def sol_agent_runs() -> dict[str, dict]:
+    """The latest gpt-6.1-sol agent run per target. A lost report falls back to its final
+    pair, measured again afterwards."""
+    runs = latest("agent", SOL_MODEL)
     for path in (RESULTS / "final-pairs").glob("*.json"):
         record = json.loads(path.read_text())
-        sol.setdefault(record["target"], record)
-    # A blind patch ships whatever it does; the others keep measured wins only.
+        runs.setdefault(record["target"], record)
+    return runs
+
+
+def _comparison() -> tuple[list[tuple[str, dict, bool]], list[str]]:
+    """Each approach as (header, runs, blind), and the real repos all of them ran."""
+    # A blind patch ships whatever it does; the agent keeps measured wins only.
     columns = [
-        ("Agent, gpt-6.1-sol", sol, False),
-        ("One patch, gpt-6.1-sol", latest("llm", sol_model), True),
+        ("Agent, gpt-6.1-sol", sol_agent_runs(), False),
+        ("One patch, gpt-6.1-sol", latest("llm", SOL_MODEL), True),
         ("Agent, gpt-6-luna", latest("agent", MAIN_MODEL), False),
         ("One patch, gpt-6-luna", latest("llm", MAIN_MODEL), True),
-        (DIRECT, hand_fixes(), False),
     ]
     common = set.intersection(*(set(runs) for _, runs, _ in columns))
     return columns, sorted(t for t in common if not t.startswith("bench-"))
@@ -226,8 +178,7 @@ def _ships(runs: dict, blind: bool, target: str) -> tuple[float, bool]:
 
 
 def compare_models() -> str:
-    """Each repo against the original on an L4: both models with and without the loop,
-    plus the direct fix as a reference."""
+    """Each repo against the original on an L4: both models with and without the loop."""
     columns, targets = _comparison()
     lines = [
         "| Repo | " + " | ".join(header for header, _, _ in columns) + " |",
@@ -267,56 +218,40 @@ def loop_gain() -> str:
 
 
 def headline() -> str:
-    """One row per real repo: the original code against the agent's kept changes,
-    from the latest paired run saved for it in results/headline."""
-    records = headline_records()
-    prs_path = RESULTS / "prs.json"
-    prs = json.loads(prs_path.read_text()) if prs_path.exists() else {}
+    """One row per real repo: the original code against everything the gpt-6.1-sol agent
+    kept, from the final pair of its run. results/fixes.json labels each repo's changes."""
+    runs = sol_agent_runs()
+    fixes = json.loads((RESULTS / "fixes.json").read_text())
     known = stars()
-    lines = [
-        "| Repo | Stars | GPU | Before (ms/step) | After (ms/step) | Speedup | Loss | Fixes "
-        "| Pull request |",
-        "|---" * 9 + "|",
-    ]
-    for target, r in sorted(records.items(), key=lambda item: -item[1]["speedup"]):
-        repo = r["repo"].removeprefix("https://github.com/")
-        before = mean(run["step_ms"] for run in r["baseline"])
-        after = mean(run["step_ms"] for run in r["candidate"])
-        speedup = f"{r['speedup']:.2f}x" + ("" if r["keep"] else f" ({r['reason']})")
-        # The keep rule checks the loss before the speed, so only a loss or failure
-        # reason means the loss check did not pass.
-        loss = "changed" if r["reason"].startswith(("loss", "run failed")) else "within noise"
-        cells = [
-            f"[{repo}]({r['repo']})",
-            f"{known[repo]:,}" if repo in known else "",
-            r["gpu"].removeprefix("NVIDIA "),
-            f"{before:.1f}",
-            f"{after:.1f}",
-            speedup,
-            loss,
-            r["change"],
-            prs.get(target) or "not sent",
-        ]
-        lines.append("| " + " | ".join(cells) + " |")
-    # Repos where the agent kept nothing have no headline run, but they belong in the table.
-    for target, run in sorted(latest("agent", MAIN_MODEL).items()):
-        if target in records or target.startswith("bench-") or run["kept"]:
-            continue
-        url = targets.load(target).repo
+    lines = ["| Repo | Stars | Step time (ms) | Speedup | Changes kept |", "|---|---|---|---|---|"]
+    names = sorted((t for t in runs if not t.startswith("bench-")), key=lambda t: -shipped(runs[t]))
+    for target in names:
+        run, url = runs[target], targets.load(target).repo
         repo = url.removeprefix("https://github.com/")
+        before, after = _final_pair_ms(run)
+        kept = shipped(run) > 1.0
         cells = [
             f"[{repo}]({url})",
             f"{known[repo]:,}" if repo in known else "",
-            run["gpu"].removeprefix("NVIDIA "),
-            f"{run['baseline_ms']:.1f}",
-            "",
-            "nothing kept",
-            "",
-            "",
-            prs.get(target) or "not sent",
+            f"{before:.1f} → {after:.1f}" if kept else f"{before:.1f}",
+            f"{shipped(run):.2f}x" if kept else "nothing kept",
+            fixes[target] if kept else "",
         ]
         lines.append("| " + " | ".join(cells) + " |")
     return "\n".join(lines)
+
+
+def _final_pair_ms(run: dict) -> tuple[float, float | None]:
+    """Mean step time of the original and the final code in a run's last pair. A run that
+    kept nothing has only its baseline."""
+    if "final_pair" not in run:
+        return mean(r["step_ms"] for r in run["baseline"]), mean(
+            r["step_ms"] for r in run["candidate"]
+        )
+    pair = run["final_pair"]
+    if not pair or not pair.get("candidate_ms"):
+        return run["baseline_ms"], None
+    return mean(pair["baseline_ms"]), mean(pair["candidate_ms"])
 
 
 def models() -> str:
@@ -346,8 +281,6 @@ if __name__ == "__main__":
     print(models())
     print()
     print(headline())
-    print()
-    print(versus())
     print()
     print(compare_models())
     print()
