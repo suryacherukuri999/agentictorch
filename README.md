@@ -5,8 +5,8 @@ profiles a repo's real training run, tries one change at a time, and keeps a cha
 only when a rerun on the GPU shows it is faster and the loss hasn't moved.
 
 On 15 popular open-source repos, the agent with gpt-6.1-sol made 14 faster: up to
-5.52x, and 2.36x on average (geometric mean). The same model patching the code once
-without measuring averaged 1.92x and shipped 3 harmful changes; the agent shipped
+5.52x, and 2.36x on average (geometric mean). The same model writing a single patch,
+with no test runs, averaged 1.92x and shipped 3 harmful changes; the agent shipped
 none. All runs used an NVIDIA L4.
 
 ## Results
@@ -63,12 +63,12 @@ repos:
 | gpt-6.1-sol | 2.36x | 1.92x | 1.23x | 0, 3 |
 | gpt-6-luna | 1.48x | 1.31x | 1.13x | 0, 6 |
 
-Measuring mostly removed the harm. The blind patches shipped crashes, a moved loss and
-slowdowns, such as 0.60x on PyTorch-YOLOv3 from cuDNN autotuning and torch.compile on
-batch shapes that keep changing. The agent tried some of the same changes, and its
-quick check or keep rule caught them. With gpt-6.1-sol the one patch still beat the
-agent on 5 repos, mostly by bundling small changes that the agent measured one at a
-time and dropped as within noise.
+Testing each change mostly removed the harm. The single patches shipped crashes, a
+moved loss and slowdowns, such as 0.60x on PyTorch-YOLOv3 from cuDNN autotuning and
+torch.compile on batch shapes that keep changing. The agent tried some of the same
+changes, and its quick check or keep rule caught them. With gpt-6.1-sol the single
+patch still beat the agent on 5 repos, mostly by bundling small changes that the agent
+tested one at a time and dropped as within noise.
 
 ## How it works
 
@@ -163,7 +163,7 @@ download = "python scripts/download.py"         # how to fetch it, once
 Then `download`, `measure` and `run` it by name. The repo needs a training run that
 starts with one command on one GPU and steps a `torch.optim` optimizer.
 
-To measure on your own NVIDIA GPU instead of Modal, add `--backend local` to
+To use your own NVIDIA GPU instead of Modal, add `--backend local` to
 `download`, `measure` and `run`. The repo's code then runs directly on your machine,
 so use it only for code you trust.
 
@@ -172,7 +172,7 @@ so use it only for code you trust.
 - Runs are short, so the loss check covers only a few dozen steps. A change that
   hurts convergence later would pass.
 - Speedups depend on the GPU, and every result here is from an L4.
-- Measuring one change at a time against a 3% bar drops small gains that only pay off
+- Testing one change at a time against a 3% bar drops small gains that only pay off
   together.
 - Python only. A compiled C++/CUDA extension shows up only as GPU kernels, and the
   agent doesn't edit it.
