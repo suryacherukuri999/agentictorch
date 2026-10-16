@@ -5,9 +5,9 @@ profiles a repo's real training run, tries one change at a time, and keeps a cha
 only when a rerun on the GPU shows it is faster and the loss hasn't moved.
 
 On 15 popular open-source repos, the agent with gpt-6.1-sol made 14 faster: up to
-5.52x, and 2.36x on average (geometric mean). The same model writing a single patch,
-without trying it on the GPU first, averaged 1.92x and shipped 3 harmful changes; the
-agent shipped none. All runs used an NVIDIA L4.
+5.52x, and 2.36x on average (geometric mean). The same model writing a single patch
+(no testing, and no fixing if it crashed) averaged 1.92x and shipped 3 harmful
+changes; the agent shipped none. All runs used an NVIDIA L4.
 
 ## Results
 
