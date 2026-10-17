@@ -12,10 +12,11 @@ agent shipped none. All runs used an NVIDIA L4.
 ## Results
 
 Tested on an NVIDIA L4 (24 GB) on [Modal](https://modal.com), with 8 CPU cores,
-Python 3.12 and PyTorch 2.14.1, and each repo pinned to a commit. The agent ran on
-macOS with OpenAI's gpt-6.1-sol and the smaller gpt-6-luna, in October 2026. Every
-number comes from a run saved in `results/`, and
-`uv run python -m agentictorch.scoreboard` rebuilds the tables.
+Python 3.12 and PyTorch 2.14.1. Each repo is fixed at one commit, listed in its
+`targets/<name>/target.toml`, so every run uses the same code. The agent ran on macOS
+with OpenAI's gpt-6.1-sol and the smaller gpt-6-luna. Every number comes from a run
+saved in `results/`, and `uv run python -m agentictorch.scoreboard` rebuilds the
+tables.
 
 Each measurement runs the original and the changed code in the same container, once
 per seed for two seeds, for 50 steps after 10 warm-up steps. A change is kept only if
@@ -141,14 +142,14 @@ uv run agentictorch run pytorch-ddpm --model gpt-6.1-sol
 
 The report lands in `results/eval/agent/pytorch-ddpm/`, and the edited code in
 `~/agentictorch-work/work/pytorch-ddpm/`, a git copy with one commit per kept change.
-To use the changes, `git apply` the report's diff to a checkout of the pinned commit,
-and run a full training job before trusting precision changes.
+To use the changes, check out the repo at the commit in its `target.toml`, `git apply`
+the report's diff, and run a full training job before trusting precision changes.
 
 To run it on your own repo, add `targets/<name>/target.toml`:
 
 ```toml
 repo = "https://github.com/you/your-repo"      # or a local git folder
-commit = "a1b2c3d"                              # pinned, so every run uses the same code
+commit = "a1b2c3d"                              # fixed, so every run uses the same code
 command = "python train.py --config base.yaml"  # your usual training command
 
 [image]
