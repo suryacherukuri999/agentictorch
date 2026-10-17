@@ -11,12 +11,12 @@ agent shipped none. All runs used an NVIDIA L4.
 
 ## Results
 
-Tested on an NVIDIA L4 (24 GB) on [Modal](https://modal.com), with 8 CPU cores,
-Python 3.12 and PyTorch 2.14.1. Each repo is fixed at one commit, listed in its
-`targets/<name>/target.toml`, so every run uses the same code. The agent ran on macOS
-with OpenAI's gpt-6.1-sol and the smaller gpt-6-luna. Every number comes from a run
-saved in `results/`, and `uv run python -m agentictorch.scoreboard` rebuilds the
-tables.
+Every training run used a [Modal](https://modal.com) container with an NVIDIA L4
+(24 GB), 8 CPU cores and 16 GB of memory, running Python 3.12 and PyTorch 2.14.1. Each
+repo is fixed at one commit, listed in its `targets/<name>/target.toml`, so every run
+uses the same code. The agent itself ran on macOS with OpenAI's gpt-6.1-sol and the
+smaller gpt-6-luna. Every number comes from a run saved in `results/`, and
+`uv run python -m agentictorch.scoreboard` rebuilds the tables.
 
 Each measurement runs the original and the changed code in the same container, once
 per seed for two seeds, for 50 steps after 10 warm-up steps. A change is kept only if
