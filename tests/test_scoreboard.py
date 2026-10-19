@@ -72,7 +72,7 @@ def test_headline_table_has_one_row_per_repo_from_its_final_pair(tmp_path, monke
     )
     assert ddpm.endswith("| 1,234 | 550.0 → 220.0 | 2.50x | bf16 |")
     assert vit.endswith("| 99 | 28.0 → 11.0 | 2.43x | fused attention |")
-    assert detr.endswith("|  | 207.9 | nothing kept |  |")
+    assert detr.endswith("|  | 207.9 | 1.00x | none |")
 
 
 def test_runs_are_ordered_by_time_and_kept_apart_by_model(tmp_path, monkeypatch):

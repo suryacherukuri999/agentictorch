@@ -237,8 +237,8 @@ def headline() -> str:
             f"[{repo}]({url})",
             f"{known[repo]:,}" if repo in known else "",
             f"{before:.1f} → {after:.1f}" if kept else f"{before:.1f}",
-            f"{shipped(run):.2f}x" if kept else "nothing kept",
-            fixes[target] if kept else "",
+            f"{shipped(run):.2f}x",
+            fixes[target] if kept else "none",
         ]
         lines.append("| " + " | ".join(cells) + " |")
     return "\n".join(lines)
