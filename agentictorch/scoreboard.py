@@ -223,7 +223,10 @@ def headline() -> str:
     runs = sol_agent_runs()
     fixes = json.loads((RESULTS / "fixes.json").read_text())
     known = stars()
-    lines = ["| Repo | Stars | Step time (ms) | Speedup | Changes kept |", "|---|---|---|---|---|"]
+    lines = [
+        "| Repo | Stars | Step time (ms) | Speedup | What made it faster |",
+        "|---|---|---|---|---|",
+    ]
     names = sorted((t for t in runs if not t.startswith("bench-")), key=lambda t: -shipped(runs[t]))
     for target in names:
         run, url = runs[target], targets.load(target).repo
