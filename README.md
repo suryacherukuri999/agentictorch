@@ -27,7 +27,7 @@ Speedup is the original step time divided by the new one.
 
 With gpt-6.1-sol:
 
-| Repo | Stars | Step time (ms) | Speedup | What made it faster |
+| Repo | Stars | Step time (ms) | Speedup | Changes that made it faster |
 |---|---|---|---|---|
 | [lucidrains/x-transformers](https://github.com/lucidrains/x-transformers) | 5,961 | 700.9 → 127.1 | 5.52x | flash attention, bf16, torch.compile, fused Adam |
 | [yanx27/Pointnet_Pointnet2_pytorch](https://github.com/yanx27/Pointnet_Pointnet2_pytorch) | 4,967 | 279.8 → 57.2 | 4.89x | no syncs in point sampling, a Triton sampling kernel, bf16 convolutions |

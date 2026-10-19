@@ -224,7 +224,7 @@ def headline() -> str:
     fixes = json.loads((RESULTS / "fixes.json").read_text())
     known = stars()
     lines = [
-        "| Repo | Stars | Step time (ms) | Speedup | What made it faster |",
+        "| Repo | Stars | Step time (ms) | Speedup | Changes that made it faster |",
         "|---|---|---|---|---|",
     ]
     names = sorted((t for t in runs if not t.startswith("bench-")), key=lambda t: -shipped(runs[t]))
