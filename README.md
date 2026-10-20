@@ -71,45 +71,51 @@ to count.
 ```mermaid
 flowchart LR
     subgraph local["Your machine"]
-        model["LLM"] <--> agent["Agent loop<br/>reads code, searches docs, edits"]
-        agent --> copy["Working copy (git)"]
-        rule["Keep rule<br/>faster in every pair,<br/>loss within noise"] -- "keep or undo" --> copy
-        rule --> report["Report<br/>changes, measured effect, diff"]
+        model["LLM"] <--> agent["Agent<br/>reads code, searches docs, edits"]
+        agent --> copy["Copy of the repo"]
+        rule["Decide<br/>keep only if faster<br/>with the same loss"] -- "keep or undo" --> copy
+        rule --> report["Report<br/>changes, speedup, diff"]
     end
     subgraph gpu["GPU: Modal, or your own"]
-        run["The repo's own training command<br/>with the harness injected at startup"]
-        prof["Profiler summary<br/>time and syncs per repo line"]
+        run["The repo's own training command<br/>with a timing file loaded first"]
+        prof["Profile summary<br/>where the time goes, by code line"]
     end
-    copy -- "original and edited code, as a pair" --> run
+    copy -- "original and edited code, side by side" --> run
     run -- "step times, memory, losses" --> rule
     run --> prof --> agent
 ```
 
-1. **Baseline.** Run the repo's own training command for a few dozen steps per seed.
-2. **Profile.** A short run under the PyTorch profiler, summarized as text: GPU busy
-   share, data-loading wait, host-device syncs and the top ops, each tied to the repo
-   line behind it.
-3. **Diagnose.** The model reads the summary and the code, and can search a local
-   index of PyTorch and NVIDIA performance docs.
-4. **Try a fix.** It edits a git copy of the repo. A five-step quick check catches
-   crashes before a full benchmark.
-5. **Keep or revert.** The edit runs as a pair against the best version so far, and
-   plain code, not the model, decides what stays.
-6. **Report.** After up to five rounds, a final pair measures the original against
-   all the changes that stayed. The report lists each attempt, its measured effect and
-   the diff.
+1. **Measure the original.** Run the repo's own training command for a few dozen
+   steps, once for each of two seeds, and record the time per step, memory and loss.
+2. **Find where the time goes.** Run a short training under the PyTorch profiler and
+   turn the result into a short text summary: how busy the GPU is, how long it waits
+   for data, how often the CPU waits for the GPU, and which operations take the most
+   time, each with the line of code that caused it.
+3. **Pick a fix.** The model reads the summary and the code. It can also search a
+   local copy of PyTorch and NVIDIA performance guides.
+4. **Try it.** The model edits a copy of the repo. A 5-step test run catches crashes
+   before the full timing run.
+5. **Keep it or undo it.** The edited code and the best version so far run side by
+   side. The change stays only if it is faster and the loss is the same. Plain code
+   makes this call, not the model.
+6. **Report.** After up to 5 tries, the original and the final code run side by side
+   one last time. The report lists every change tried, how much each one helped, and
+   the final diff.
 
 Some details:
-- The repo's code isn't changed for measuring. A `sitecustomize.py` on `PYTHONPATH`
-  loads first. It times steps with a global optimizer step hook, keeps the loss
-  tensors to read at the end instead of syncing every step, seeds the run and stops it
-  cleanly after N steps.
-- Runs are paired because containers differ: the same PyTorch-GAN code ran at 19.1 ms
-  per step in one container and 28.9 ms in another (`results/unpaired/`).
-- In the profile run, a `TorchFunctionMode` tags each torch call from repo code with
-  its source line, and CUDA's sync debug mode does the same for host-device syncs.
-- The docs search combines BM25 with local `bge-small-en-v1.5` embeddings and reranks
-  with `bge-reranker-base`.
+- **Timing without changing the repo.** A small Python file (`sitecustomize.py`) loads
+  before the repo's code. It times each training step, records the loss without
+  slowing the run, fixes the random seeds, and stops the run cleanly after a set
+  number of steps.
+- **Why side by side.** Two machines can run the same code at different speeds: the
+  same PyTorch-GAN code took 19.1 ms per step on one and 28.9 ms on another
+  (`results/unpaired/`). So the original and the edit always run on the same machine.
+- **Finding the slow line.** During the profile run, every PyTorch call from the
+  repo's code is tagged with its file and line, and so is every place where the CPU
+  waits for the GPU. That's how the summary can point at the exact line to fix.
+- **Docs search.** Keyword search combined with a small local model that matches by
+  meaning, then a second local model that sorts the results. It all runs on your
+  machine.
 
 ## Build and run
 
