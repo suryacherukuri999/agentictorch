@@ -58,12 +58,13 @@ repos:
 | gpt-6.1-sol | 2.36x | 1.92x | 1.23x | 0, 3 |
 | gpt-6-luna | 1.48x | 1.31x | 1.13x | 0, 6 |
 
-Testing each change mostly removed the harm. The single patches shipped crashes, a
-moved loss and slowdowns, such as 0.60x on PyTorch-YOLOv3 from cuDNN autotuning and
-torch.compile on batch shapes that keep changing. The agent tried some of the same
-changes, and its quick check or keep rule caught them. With gpt-6.1-sol the single
-patch still beat the agent on 5 repos, mostly by bundling small changes that the agent
-tested one at a time and dropped as within noise.
+Because the agent tests every change, it never made a repo worse. The single patches
+did: some crashed or timed out, one changed the loss, and five made training slower,
+the worst at 0.60x on PyTorch-YOLOv3. The agent tried some of the same changes, but
+its tests caught the problems and it undid them. With gpt-6.1-sol, the single patch
+was still faster on 5 repos. On most of them it made several small changes together;
+the agent tried them one at a time and undid each one, since alone it was too small
+to count.
 
 ## How it works
 
