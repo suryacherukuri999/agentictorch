@@ -47,10 +47,10 @@ With gpt-6.1-sol:
 
 ### Agent vs one patch
 
-The `llm` setup gives the same model the same start as the agent (the training
-command, tools to read and edit code, and hints from a static scan) but no way to run
-anything. It writes one patch, which ships whatever it does: a crash, a moved loss or
-a slowdown counts as harmful, and a crash counts as 1.00x. Geometric means over the 15
+The single patch (`--setup llm`) starts from the same place as the agent: the training
+command, tools to read and edit code, and hints from a static scan. The model edits
+the code once, and the patch ships whatever it does: a crash, a moved loss or a
+slowdown counts as harmful, and a crash counts as 1.00x. Geometric means over the 15
 repos:
 
 | Model | Agent | One patch | Agent vs one patch | Harmful changes (agent, one patch) |
