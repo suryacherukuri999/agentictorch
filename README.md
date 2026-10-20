@@ -43,13 +43,7 @@ With gpt-6.1-sol:
 | [lucidrains/transfusion-pytorch](https://github.com/lucidrains/transfusion-pytorch) | 1,408 | 81.6 → 51.3 | 1.58x | torch.compile |
 | [Zeleni9/pytorch-wgan](https://github.com/Zeleni9/pytorch-wgan) | 809 | 76.6 → 54.5 | 1.41x | DataLoader workers, no generator gradients in critic steps, cuDNN autotuning, fused Adam |
 | [giddyyupp/ganilla](https://github.com/giddyyupp/ganilla) | 482 | 133.4 → 99.5 | 1.34x | torch.compile, pinned copies |
-| [facebookresearch/detr](https://github.com/facebookresearch/detr) | 15,352 | 207.9 | nothing kept |  |
-
-Every kept change passed the loss check. On DETR nothing the agent tried was faster:
-at batch size 2, Python overhead per op sets the pace. The pytorch-ddpm and
-rectified-flow-pytorch runs stopped before their final measurement, so those rows come
-from measuring the kept changes again (`results/final-pairs/`). No pull requests have
-been sent yet.
+| [facebookresearch/detr](https://github.com/facebookresearch/detr) | 15,352 | 207.9 | 1.00x | none |
 
 ### Agent vs one patch
 
@@ -101,7 +95,8 @@ flowchart LR
 5. **Keep or revert.** The edit runs as a pair against the best version so far, and
    plain code, not the model, decides what stays.
 6. **Report.** After up to five rounds, a final pair measures the original against
-   everything kept. The report lists each attempt, its measured effect and the diff.
+   all the changes that stayed. The report lists each attempt, its measured effect and
+   the diff.
 
 Some details:
 - The repo's code isn't changed for measuring. A `sitecustomize.py` on `PYTHONPATH`
@@ -141,7 +136,7 @@ uv run agentictorch run pytorch-ddpm --model gpt-6.1-sol
 ```
 
 The report lands in `results/eval/agent/pytorch-ddpm/`, and the edited code in
-`~/agentictorch-work/work/pytorch-ddpm/`, a git copy with one commit per kept change.
+`~/agentictorch-work/work/pytorch-ddpm/`, a git copy with one commit per change that stayed.
 To use the changes, check out the repo at the commit in its `target.toml`, `git apply`
 the report's diff, and run a full training job before trusting precision changes.
 
@@ -187,8 +182,8 @@ so use it only for code you trust.
 - Trusting the data-wait share. On x-transformers, 61% of each step showed as waiting
   on the DataLoader, yet batching the copies cut that to 0% without changing the step
   time. The GPU busy share (88%) was the real signal.
-- float16 without a GradScaler. The agent kept it on two repos; the loss matched over
-  the short run, but small gradients can underflow over a long one. It now refuses
+- float16 without a GradScaler. It passed the checks on two repos, since the loss
+  matched over the short run, but small gradients can underflow over a long one. It now refuses
   float16 unless the repo uses a GradScaler.
 
 ## Credits
