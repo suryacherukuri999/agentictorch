@@ -113,9 +113,9 @@ Some details:
 - **Finding the slow line.** During the profile run, every PyTorch call from the
   repo's code is tagged with its file and line, and so is every place where the CPU
   waits for the GPU. That's how the summary can point at the exact line to fix.
-- **Docs search.** Keyword search combined with a small local model that matches by
-  meaning, then a second local model that sorts the results. It all runs on your
-  machine.
+- **Docs search.** Keyword search, plus two small search models that download
+  automatically: one matches by meaning, the other sorts the results. It all runs on
+  your machine.
 
 ## Build and run
 
