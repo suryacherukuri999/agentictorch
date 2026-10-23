@@ -107,9 +107,6 @@ Some details:
   before the repo's code. It times each training step, records the loss without
   slowing the run, fixes the random seeds, and stops the run cleanly after a set
   number of steps.
-- **Why side by side.** Two machines can run the same code at different speeds: the
-  same PyTorch-GAN code took 19.1 ms per step on one and 28.9 ms on another
-  (`results/unpaired/`). So the original and the edit always run on the same machine.
 - **Finding the slow line.** During the profile run, every PyTorch call from the
   repo's code is tagged with its file and line, and so is every place where the CPU
   waits for the GPU. That's how the summary can point at the exact line to fix.
