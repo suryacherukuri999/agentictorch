@@ -5,9 +5,9 @@ that ran out of memory finish) and its loss stays within the run-to-run
 variation of the loss.
 
 Runs are best measured in pairs: baseline and candidate in the same container,
-one pair per seed. Containers can land on different CPUs and GPUs, and for
-CPU-bound training that alone moved step time by 40% between runs, so
-comparing within a pair cancels it out.
+one pair per seed. Containers can land on different CPUs and GPUs; the same
+data-loading-bound code ran 51% slower in one container than in another, and
+comparing within a pair cancels that out.
 """
 
 import math
@@ -62,7 +62,6 @@ def loss_tolerance(base: Measurement, cand: Measurement) -> float:
 
 
 def loss_ok(base: Measurement, cand: Measurement) -> bool:
-    """True if the candidate's mean loss is within tolerance of the baseline's."""
     if base.seeds != cand.seeds:
         raise ValueError(f"seeds differ: {base.seeds} vs {cand.seeds}")
     if not cand.loss_finite:

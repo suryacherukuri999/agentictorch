@@ -1,7 +1,7 @@
 """The rules-only setup: fixed edits for problems the static detectors find.
 
-TorchFix (checked 2026-10-24, version 0.7.0) only flags deprecated and unsafe
-APIs, so these few AST rules stand in for a rule-based fixer.
+TorchFix 0.7.0 only flags deprecated and unsafe APIs, so these few AST rules
+stand in for a rule-based fixer.
 """
 
 import ast

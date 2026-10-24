@@ -1,5 +1,3 @@
-"""Command-line entry point."""
-
 import argparse
 import json
 import signal

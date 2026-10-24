@@ -69,8 +69,7 @@ def summary(run: Run) -> dict:
         "model": run.model,
         "gpu": base.gpu if base else None,
         "baseline_ms": base.mean_step_ms if base and base.completed else None,
-        # The measured effect of the final change, whether or not the keep rule kept it:
-        # setups that patch blind would apply it either way.
+        # Recorded even if the change was reverted: blind setups apply their patch anyway.
         "measured_speedup": final.verdict.speedup if final else None,
         "speedup": final.verdict.speedup if final and final.verdict.keep else 1.0,
         "kept": [a.description for a in s.kept],
@@ -83,8 +82,7 @@ def summary(run: Run) -> dict:
             }
             for a in s.attempts
         ],
-        # Per-run numbers of the final pair (original against everything kept), so
-        # the total can be checked without the raw runs.
+        # So the total can be checked without the raw runs.
         "final_pair": {
             "baseline_ms": final.baseline.step_ms if final.baseline.completed else None,
             "candidate_ms": final.candidate.step_ms if final.candidate.completed else None,

@@ -252,8 +252,7 @@ def _measure_in_container(
 def _download_in_container(command: str, dataset: str) -> str:
     dest = Path("/data") / dataset
     if not dest.exists():
-        # Download beside the final folder and rename on success, so a failed
-        # download never leaves a half-filled folder that later runs would trust.
+        # Rename only on success, so a failed download never leaves a half-filled folder.
         partial = Path("/data") / f".{dataset}.partial"
         shutil.rmtree(partial, ignore_errors=True)
         partial.mkdir(parents=True)

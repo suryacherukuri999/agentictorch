@@ -21,14 +21,12 @@ from agentictorch.measurement import Measurement
 from agentictorch.targets import Target
 from agentictorch.tools.files import ToolError
 
-# A quick check runs this many steps: enough to get through start-up and a few
-# optimizer steps, far too few to say anything about speed.
+# A quick check only has to get through start-up and a few optimizer steps.
 CHECK_WARMUP = 2
 CHECK_STEPS = 3
 NO_CHANGE = "nothing has changed since the last kept version; make an edit with apply_edit first"
-# Float16 has a narrow exponent range: without loss scaling, small gradients underflow
-# to zero over a long run, which a few dozen measured steps can't show. CUDA autocast
-# without a dtype means float16.
+# Without loss scaling, small float16 gradients underflow over a long run, which a short
+# run can't show. CUDA autocast without a dtype means float16.
 FLOAT16 = re.compile(r"(?<!b)float16|torch\.half\b|\.half\(\)")
 
 

@@ -18,8 +18,7 @@ from agentictorch.agent.models import MODELS
 
 RESULTS = Path(__file__).parent.parent / "results"
 SETUPS = ["rules", "llm", "llm-kb", "agent"]
-# The setups were compared with gpt-6-luna. The planted suite ran with the local model,
-# which turned out too slow for the real repos.
+# The setups were compared with gpt-6-luna, the planted suite with the local model.
 MAIN_MODEL = MODELS["gpt-6-luna"].name
 SOL_MODEL = MODELS["gpt-6.1-sol"].name
 LOCAL_MODEL = MODELS["ornith-9b"].name
@@ -90,7 +89,6 @@ def outcome(record: dict, setup: str) -> tuple[float, bool]:
 def table(model: str = MAIN_MODEL) -> str:
     results = compared(model)
     targets = sorted(results["agent"])
-    # Only planted cases have a known slowdown; real repos leave the column out.
     planted = any(planted_slowdown(t) for t in targets)
     columns = ["Target", *(["Planted slowdown"] if planted else []), *SETUPS]
     lines = ["| " + " | ".join(columns) + " |", "|---" * len(columns) + "|"]

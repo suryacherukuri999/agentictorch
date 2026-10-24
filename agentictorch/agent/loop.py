@@ -135,8 +135,7 @@ def run(
         try:
             reply = llm.chat(model, messages, schemas)
         except (RuntimeError, OSError) as e:
-            # A timeout or an outage ends the run, but the changes
-            # already measured and kept still count.
+            # The changes already kept still count.
             result.stopped = f"the model failed: {e}"
             log(f"stopped: {result.stopped}")
             break
@@ -167,8 +166,7 @@ def run(
         elif session.kept:
             result.final = session.final()
     except Exception as e:
-        # The report still lists every measured attempt; the final pair can be rerun
-        # from the working copy with `agentictorch ab`.
+        # The report still lists every attempt; `agentictorch ab` can rerun the final pair.
         result.stopped = f"the final measurement failed: {type(e).__name__}: {e}"
         log(f"stopped: {result.stopped}")
     return result

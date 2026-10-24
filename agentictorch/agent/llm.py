@@ -1,8 +1,8 @@
 """A thin client for OpenAI-compatible chat APIs.
 
-Ollama, Gemini, GitHub Models and OpenAI all accept the same chat-completions
-request with tools, so one client covers every model. Responses are cached on
-disk, and 429s are retried with backoff.
+Ollama, Gemini and OpenAI all accept the same chat-completions request with
+tools, so one client covers every model. Responses are cached on disk, and 429s
+are retried with backoff.
 """
 
 import hashlib
@@ -90,20 +90,17 @@ def _post(model: Model, request: dict, attempts: int = 6) -> dict:
     for attempt in range(attempts):
         try:
             http = urllib.request.Request(url, data=data, headers=headers)
-            # Long, because a local model serving several agents at once can take
-            # minutes to reason through one turn.
+            # A local model serving several agents can take minutes per turn.
             with urllib.request.urlopen(http, timeout=1200) as response:
                 return json.load(response)
         except urllib.error.HTTPError as e:
-            # Rate limits and overload pass; a 500 can be a request the model always
-            # fails on (a local model that never stops reasoning), so retry it once.
+            # Rate limits and overload pass; a 500 may not, so it gets one retry.
             transient = e.code in (429, 502, 503) or (e.code == 500 and attempt == 0)
             if not transient or attempt == attempts - 1:
                 raise RuntimeError(f"{model.name}: HTTP {e.code}: {e.read()[:500]!r}") from None
             time.sleep(min(2**attempt * 5, 120))
         except (TimeoutError, urllib.error.URLError) as e:
-            # HTTPError is a URLError too, but is handled above. A timeout or a dropped
-            # connection gets one retry.
+            # A timeout or a dropped connection gets one retry.
             if attempt > 0:
                 raise RuntimeError(f"{model.name}: {e}") from None
             time.sleep(5)

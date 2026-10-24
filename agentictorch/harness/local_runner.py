@@ -71,8 +71,7 @@ def download(target: Target, *, verbose: bool = True) -> str:
         raise ValueError(f"{target.name} has no dataset to download")
     dest = DATA / target.dataset
     if not dest.exists():
-        # Download beside the final folder and rename on success, so a failed download
-        # never leaves a half-filled folder that later runs would trust.
+        # Rename only on success, so a failed download never leaves a half-filled folder.
         partial = DATA / f".{target.dataset}.partial"
         shutil.rmtree(partial, ignore_errors=True)
         partial.mkdir(parents=True)

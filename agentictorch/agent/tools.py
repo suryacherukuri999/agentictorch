@@ -9,9 +9,8 @@ from agentictorch.tools.files import ToolError
 MAX_PROFILES = 2
 MAX_CHECKS = 5
 DOC_CHARS = 700
-# Tools that run on Modal, where a call can fail for reasons outside the code (a lost
-# container, a remote exception); such a failure shouldn't end a run that has already
-# measured and kept changes.
+# These can fail for reasons outside the code, such as a lost container; that shouldn't
+# end a run that has already kept changes.
 GPU_TOOLS = {"profile", "quick_check", "run_benchmark"}
 
 

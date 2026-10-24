@@ -18,8 +18,8 @@ class Target:
     timeout: int = 1800
     pip: tuple[str, ...] = ()
     apt: tuple[str, ...] = ()
-    # The dataset lives in the Modal Volume under `dataset`; `data_path` is
-    # where the repo expects it; `download` fills the Volume folder once.
+    # `dataset` names the dataset's folder in storage, `data_path` is where the repo
+    # expects it, and `download` fills the folder once.
     dataset: str | None = None
     data_path: str | None = None
     download: str | None = None

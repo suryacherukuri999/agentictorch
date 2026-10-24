@@ -8,7 +8,6 @@ MODELS = {
     "ornith-9b": Model(
         "ornith-1.5:9b", "http://localhost:11434/v1", temperature=0.6, reasoning_effort="low"
     ),
-    # Through Google's OpenAI-compatible endpoint.
     "gemini-flash": Model(
         "gemini-3.8-flash",
         "https://generativelanguage.googleapis.com/v1beta/openai",
