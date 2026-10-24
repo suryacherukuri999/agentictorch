@@ -186,26 +186,30 @@ so only do this with code you trust.
 
 ## Limitations
 
-- Runs are short, so the loss check covers only a few dozen steps. A change that
-  hurts convergence later would pass.
-- Speedups depend on the GPU, and every result here is from an L4.
-- Testing one change at a time against a 3% bar drops small gains that only pay off
-  together.
-- Python only. A compiled C++/CUDA extension shows up only as GPU kernels, and the
-  agent doesn't edit it.
-- The local GPU backend has only been tested in CPU mode, on our own test scripts.
+- **Short runs.** Each run is a few dozen steps, so the loss check only covers those
+  steps. A change that hurts training later on would still pass.
+- **One GPU type.** How much a change helps depends on the GPU. Every result here is
+  from an L4.
+- **One change at a time.** A change stays only if it alone is at least 3% faster, so
+  small changes that only help when combined get undone.
+- **Python only.** The agent edits Python code. It doesn't look inside or edit
+  compiled C++ or CUDA code.
+- **Own-GPU mode is barely tested.** `--backend local` has only been tried without a
+  GPU, on our own small test scripts.
 
 ## What didn't work
 
-- The profiler's own stack traces (`with_stack=True`) named frames by their function's
-  `def` line on PyTorch 2.14, not the line that ran. The source-line tags replaced
-  them.
-- Trusting the data-wait share. On x-transformers, 61% of each step showed as waiting
-  on the DataLoader, yet batching the copies cut that to 0% without changing the step
-  time. The GPU busy share (88%) was the real signal.
-- float16 without a GradScaler. It passed the checks on two repos, since the loss
-  matched over the short run, but small gradients can underflow over a long one. It now refuses
-  float16 unless the repo uses a GradScaler.
+- **PyTorch's built-in code lines.** The profiler's own option for this
+  (`with_stack=True`) pointed at the line where each function starts, not the line
+  that ran (PyTorch 2.14). So we tag each call with its line ourselves.
+- **Trusting the "waiting for data" number.** On x-transformers the profiler said 61%
+  of each step was spent waiting for data. Fixing the data loading cut the wait to 0%,
+  but each step took just as long. The number that mattered was that the GPU was
+  already busy 88% of the time.
+- **float16 without a GradScaler.** The agent kept float16 on two repos because the
+  loss looked fine over the short run. Without a GradScaler, small gradients can round
+  down to zero over a long run. Now the agent only uses float16 if the repo already
+  has a GradScaler.
 
 ## Credits
 
