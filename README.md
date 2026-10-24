@@ -139,33 +139,50 @@ uv run agentictorch measure pytorch-ddpm        # optional: time the original co
 uv run agentictorch run pytorch-ddpm --model gpt-6.1-sol
 ```
 
-The report lands in `results/eval/agent/pytorch-ddpm/`, and the edited code in
-`~/agentictorch-work/work/pytorch-ddpm/`, a git copy with one commit per change that stayed.
-To use the changes, check out the repo at the commit in its `target.toml`, `git apply`
-the report's diff, and run a full training job before trusting precision changes.
+**What you get.** When the run ends:
+- A report in `results/eval/agent/pytorch-ddpm/`: a `.md` file to read and a `.json`
+  file with the raw numbers. It lists every change the agent tried, how much faster
+  each one was, and the final code diff.
+- The edited code in `~/agentictorch-work/work/pytorch-ddpm/`, in a folder named after
+  the run. It's a git copy of the repo with one commit per change that made it faster.
 
-To run it on your own repo, add `targets/<name>/target.toml`:
+**Using the changes.**
+1. Check out the repo at the commit listed in its `targets/<name>/target.toml`.
+2. Copy the diff from the report's "Diff of the kept changes" section into a file,
+   for example `fix.diff`, and run `git apply fix.diff`.
+3. If the changes include bf16 or float16, run a full training job before you rely on
+   them. The agent only checks the loss over a few dozen steps.
+
+**Your own repo.** It needs a training script that starts with one command, runs on
+one GPU, and uses a PyTorch optimizer from `torch.optim`. Create
+`targets/<name>/target.toml`, where `<name>` is a short name you pick:
 
 ```toml
-repo = "https://github.com/you/your-repo"      # or a local git folder
-commit = "a1b2c3d"                              # fixed, so every run uses the same code
-command = "python train.py --config base.yaml"  # your usual training command
+repo = "https://github.com/you/your-repo"      # GitHub URL or a local git folder
+commit = "a1b2c3d"                              # the commit to test
+command = "python train.py --config base.yaml"  # how you normally start training
 
 [image]
-pip = ["timm", "einops"]                        # packages beyond PyTorch
+pip = ["timm", "einops"]                        # packages your code needs besides PyTorch
 
-[data]                                          # optional
-dataset = "my-data"                             # folder name in Modal storage
-path = "data"                                   # where your code expects it
-download = "python scripts/download.py"         # how to fetch it, once
+[data]                                          # only if your code needs a dataset
+dataset = "my-data"                             # a name for the dataset
+path = "data"                                   # the folder your code reads it from
+download = "python scripts/download.py"         # the command that downloads it
 ```
 
-Then `download`, `measure` and `run` it by name. The repo needs a training run that
-starts with one command on one GPU and steps a `torch.optim` optimizer.
+Then run the same commands with your name:
 
-To use your own NVIDIA GPU instead of Modal, add `--backend local` to
-`download`, `measure` and `run`. The repo's code then runs directly on your machine,
-so use it only for code you trust.
+```
+uv run agentictorch download <name>             # only if you added [data]
+uv run agentictorch measure <name>              # checks that your training can be timed
+uv run agentictorch run <name> --model gpt-6.1-sol
+```
+
+**Your own GPU.** To use your own NVIDIA GPU instead of Modal, add `--backend local`
+to each command, for example `uv run agentictorch run <name> --backend local`. Your
+repo's code then runs directly on your computer instead of in an isolated container,
+so only do this with code you trust.
 
 ## Limitations
 
