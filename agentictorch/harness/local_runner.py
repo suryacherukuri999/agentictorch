@@ -117,7 +117,7 @@ def _run(
             repo,
             steps=steps or target.steps,
             warmup=warmup or target.warmup,
-            seed=seed if job.seed is None else job.seed,
+            seed=seed,
             timeout=target.timeout,
             env={**target.env, **_python_first(target)},
             profile=profile,

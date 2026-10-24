@@ -9,10 +9,9 @@ def fake_run(calls):
     def run(target, job_lists, seeds, *, gpu, verbose):
         calls.append((job_lists, seeds))
         return [
-            [{"repo": job.repo_dir.name, "seed": job.seed if job.seed is not None else seed}
-             for job in jobs]
+            [{"repo": job.repo_dir.name, "seed": seed} for job in jobs]
             for jobs, seed in zip(job_lists, seeds, strict=True)
-        ]  # fmt: skip
+        ]
 
     return run
 

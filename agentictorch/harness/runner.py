@@ -28,7 +28,6 @@ class Job:
 
     repo_dir: Path
     extra_args: str = ""
-    seed: int | None = None  # overrides the run's seed for this job
 
 
 def run(

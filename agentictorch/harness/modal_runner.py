@@ -119,7 +119,6 @@ def _run(
                 {
                     "payload": payloads[job.repo_dir],
                     "command": f"{target.command} {job.extra_args}".strip(),
-                    "seed": job.seed,
                 }
                 for job in jobs
             ]
@@ -238,9 +237,7 @@ def _measure_in_container(
             repo,
             steps=steps,
             warmup=warmup,
-            # Containers load this file from the working tree, so a caller started
-            # before jobs carried seeds may send none.
-            seed=seed if job.get("seed") is None else job["seed"],
+            seed=seed,
             timeout=timeout,
             env=env,
             profile=profile,
