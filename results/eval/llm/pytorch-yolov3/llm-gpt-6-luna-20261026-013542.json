@@ -1,0 +1,41 @@
+{
+ "target": "pytorch-yolov3",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 468.95507903000004,
+ "measured_speedup": 0.781743361782882,
+ "speedup": 1.0,
+ "kept": [],
+ "attempts": [
+  {
+   "change": "llm patch, made without measuring",
+   "keep": false,
+   "reason": "0.78x is within noise",
+   "speedup": 0.781743361782882
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   469.6263312800001,
+   468.28382677999997
+  ],
+  "candidate_ms": [
+   598.1430267600001,
+   601.6281515600001
+  ],
+  "baseline_loss": [
+   3.1725356578826904,
+   3.1478730201721192
+  ],
+  "candidate_loss": [
+   3.1723190784454345,
+   3.1486140886942544
+  ]
+ },
+ "turns": 11,
+ "tokens": {
+  "input": 55164,
+  "output": 1397
+ },
+ "stopped": null
+}

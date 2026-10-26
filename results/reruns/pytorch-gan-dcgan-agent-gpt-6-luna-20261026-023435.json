@@ -1,0 +1,61 @@
+{
+ "target": "pytorch-gan-dcgan",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 28.958903130000003,
+ "measured_speedup": 2.0437812126199764,
+ "speedup": 2.0437812126199764,
+ "kept": [
+  "Use 8 DataLoader workers with pinned memory and persistent workers, and asynchronously transfer image batches to CUDA to reduce the measured input wait."
+ ],
+ "attempts": [
+  {
+   "change": "Use 8 DataLoader workers with pinned memory and persistent workers, and asynchronously transfer image batches to CUDA to reduce the measured input wait.",
+   "keep": true,
+   "reason": "2.15x faster, loss within noise",
+   "speedup": 2.1456280895043274
+  },
+  {
+   "change": "Generate latent noise directly on the target device instead of generating it with NumPy on the CPU and copying it to CUDA.",
+   "keep": false,
+   "reason": "1.13x is within noise",
+   "speedup": 1.1313257622321358
+  },
+  {
+   "change": "Use bfloat16 autocast for generator and discriminator convolution/linear operations while retaining float32 BCELoss for safe, numerically stable loss computation.",
+   "keep": false,
+   "reason": "0.95x is within noise",
+   "speedup": 0.9514119964949374
+  },
+  {
+   "change": "Enable fused CUDA Adam optimizers to reduce optimizer kernel-launch overhead without changing optimizer settings.",
+   "keep": false,
+   "reason": "1.03x is within noise",
+   "speedup": 1.0347316702115044
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   29.701233820000006,
+   28.098698760000005
+  ],
+  "candidate_ms": [
+   15.280275999999944,
+   13.075571960000012
+  ],
+  "baseline_loss": [
+   0.6481037378311157,
+   0.6741866171360016
+  ],
+  "candidate_loss": [
+   0.6467925310134888,
+   0.6742620329062144
+  ]
+ },
+ "turns": 22,
+ "tokens": {
+  "input": 222907,
+  "output": 1584
+ },
+ "stopped": null
+}

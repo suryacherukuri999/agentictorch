@@ -1,0 +1,41 @@
+{
+ "target": "pointnet2",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 289.83033873000005,
+ "measured_speedup": 1.1441328706640401,
+ "speedup": 1.0,
+ "kept": [],
+ "attempts": [
+  {
+   "change": "llm patch, made without measuring",
+   "keep": false,
+   "reason": "loss moved by 0.06066, more than 0.06017",
+   "speedup": 1.1441328706640401
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   292.29976532,
+   287.3609121400001
+  ],
+  "candidate_ms": [
+   253.2645588199999,
+   253.35461187999996
+  ],
+  "baseline_loss": [
+   3.003043556213379,
+   3.013991038004557
+  ],
+  "candidate_loss": [
+   3.0599525928497315,
+   3.078411308924357
+  ]
+ },
+ "turns": 7,
+ "tokens": {
+  "input": 71956,
+  "output": 1027
+ },
+ "stopped": null
+}

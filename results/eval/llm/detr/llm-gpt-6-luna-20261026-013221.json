@@ -1,0 +1,41 @@
+{
+ "target": "detr",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 208.70269772,
+ "measured_speedup": 0.9708066566416338,
+ "speedup": 1.0,
+ "kept": [],
+ "attempts": [
+  {
+   "change": "llm patch, made without measuring",
+   "keep": false,
+   "reason": "0.97x is within noise",
+   "speedup": 0.9708066566416338
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   209.55125502,
+   207.85414042
+  ],
+  "candidate_ms": [
+   208.43487265999997,
+   221.72418835999997
+  ],
+  "baseline_loss": [
+   46.50313873291016,
+   50.25092544555664
+  ],
+  "candidate_loss": [
+   46.501616923014325,
+   50.22566401163737
+  ]
+ },
+ "turns": 6,
+ "tokens": {
+  "input": 54390,
+  "output": 556
+ },
+ "stopped": null
+}

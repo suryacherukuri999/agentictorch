@@ -1,0 +1,38 @@
+{
+ "target": "pytorch-wgan",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 78.0419785199999,
+ "measured_speedup": null,
+ "speedup": 1.0,
+ "kept": [],
+ "attempts": [
+  {
+   "change": "llm patch, made without measuring",
+   "keep": false,
+   "reason": "run failed: See https://pytorch.org/docs/stable/library.html#torch.library.opcheck",
+   "speedup": null
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   78.22960647999999,
+   77.85435055999983
+  ],
+  "candidate_ms": null,
+  "baseline_loss": [
+   -7.707495972845289,
+   -6.949748219384087
+  ],
+  "candidate_loss": [
+   null,
+   null
+  ]
+ },
+ "turns": 12,
+ "tokens": {
+  "input": 104333,
+  "output": 1205
+ },
+ "stopped": null
+}

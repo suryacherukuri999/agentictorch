@@ -1,0 +1,43 @@
+{
+ "target": "efficient-kan",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 17.738831390000005,
+ "measured_speedup": 3.3917135653708903,
+ "speedup": 3.3917135653708903,
+ "kept": [
+  "llm patch, made without measuring"
+ ],
+ "attempts": [
+  {
+   "change": "llm patch, made without measuring",
+   "keep": true,
+   "reason": "3.39x faster, loss within noise",
+   "speedup": 3.3917135653708903
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   17.440658059999983,
+   18.037004720000027
+  ],
+  "candidate_ms": [
+   5.1044459599999925,
+   5.357230580000021
+  ],
+  "baseline_loss": [
+   0.7391134023666381,
+   0.7077982902526856
+  ],
+  "candidate_loss": [
+   0.7390217463175456,
+   0.7074959595998128
+  ]
+ },
+ "turns": 7,
+ "tokens": {
+  "input": 11316,
+  "output": 766
+ },
+ "stopped": null
+}

@@ -1,0 +1,69 @@
+{
+ "target": "pointnet2",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 291.0480304,
+ "measured_speedup": 4.940013998870279,
+ "speedup": 4.940013998870279,
+ "kept": [
+  "Replace dynamic boolean gather/scatter updates with fixed-shape torch.where to eliminate repeated CUDA nonzero synchronizations.",
+  "Fuse FPS into a Triton kernel with unchanged CPU RNG, FP32 distance arithmetic without FMA, and first-index argmax tie handling.",
+  "Use bfloat16 autocast for train/eval convolution and linear layers, with float32 neighborhood geometry; disabled scaler is a no-op for BF16."
+ ],
+ "attempts": [
+  {
+   "change": "Replace dynamic boolean gather/scatter updates with fixed-shape torch.where to eliminate repeated CUDA nonzero synchronizations.",
+   "keep": true,
+   "reason": "1.50x faster, loss within noise",
+   "speedup": 1.5014367402824362
+  },
+  {
+   "change": "Fuse FPS into a Triton kernel with unchanged CPU RNG, FP32 distance arithmetic without FMA, and first-index argmax tie handling.",
+   "keep": true,
+   "reason": "1.82x faster, loss within noise",
+   "speedup": 1.8223506820578799
+  },
+  {
+   "change": "Use bfloat16 autocast for train/eval convolution and linear layers, with float32 neighborhood geometry; disabled scaler is a no-op for BF16.",
+   "keep": true,
+   "reason": "1.68x faster, loss within noise",
+   "speedup": 1.681875924446296
+  },
+  {
+   "change": "Use channels-last storage for Conv2d weights and grouped point activations to improve BF16 convolution and batchnorm throughput.",
+   "keep": false,
+   "reason": "0.96x is within noise",
+   "speedup": 0.9606367371772246
+  },
+  {
+   "change": "Replace full neighborhood index sort with sorted smallest-k selection; only the same sorted prefix of integer values is needed.",
+   "keep": false,
+   "reason": "0.97x is within noise",
+   "speedup": 0.9669337351125302
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   286.60692672,
+   283.51016696000005
+  ],
+  "candidate_ms": [
+   57.564950539999984,
+   57.84167020000005
+  ],
+  "baseline_loss": [
+   3.003043556213379,
+   3.013991038004557
+  ],
+  "candidate_loss": [
+   2.976041142145793,
+   3.0513812065124513
+  ]
+ },
+ "turns": 29,
+ "tokens": {
+  "input": 360710,
+  "output": 3425
+ },
+ "stopped": null
+}
