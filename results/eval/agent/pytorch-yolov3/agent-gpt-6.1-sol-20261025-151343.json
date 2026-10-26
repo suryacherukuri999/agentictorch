@@ -1,0 +1,63 @@
+{
+ "target": "pytorch-yolov3",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 560.11776517,
+ "measured_speedup": 2.1026714962995596,
+ "speedup": 2.1026714962995596,
+ "kept": [
+  "Use bfloat16 autocast for model forward and backward kernels while preserving FP32 box geometry and loss evaluation.",
+  "Use channels-last convolution weights and image batches to accelerate bfloat16 CNN kernels; preserve YOLO's non-4D anchor buffers.",
+  "Keep fixed-resolution training DataLoader workers alive across short COCO128 epochs, avoiding repeated process startup."
+ ],
+ "attempts": [
+  {
+   "change": "Remove loss indexing/clamping CPU scalar synchronizations using GPU arange and grid dimensions from tensor shapes.",
+   "keep": false,
+   "reason": "1.01x is within noise",
+   "speedup": 1.0107151375002064
+  },
+  {
+   "change": "Use bfloat16 autocast for model forward and backward kernels while preserving FP32 box geometry and loss evaluation.",
+   "keep": true,
+   "reason": "1.34x faster, loss within noise",
+   "speedup": 1.3439229761326976
+  },
+  {
+   "change": "Use channels-last convolution weights and image batches to accelerate bfloat16 CNN kernels; preserve YOLO's non-4D anchor buffers.",
+   "keep": true,
+   "reason": "1.06x faster, loss within noise",
+   "speedup": 1.0616528687301368
+  },
+  {
+   "change": "Keep fixed-resolution training DataLoader workers alive across short COCO128 epochs, avoiding repeated process startup.",
+   "keep": true,
+   "reason": "1.50x faster, loss within noise",
+   "speedup": 1.4958234411672153
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   519.0281404000001,
+   469.6091337800001
+  ],
+  "candidate_ms": [
+   246.38599168000002,
+   223.7528485
+  ],
+  "baseline_loss": [
+   3.1723392804463706,
+   3.147591479619344
+  ],
+  "candidate_loss": [
+   3.169612105687459,
+   3.1534781455993652
+  ]
+ },
+ "turns": 25,
+ "tokens": {
+  "input": 368770,
+  "output": 2014
+ },
+ "stopped": null
+}

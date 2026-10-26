@@ -1,0 +1,49 @@
+{
+ "target": "pytorch-gan-dcgan",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 30.96909735999999,
+ "measured_speedup": 2.0276216110419005,
+ "speedup": 2.0276216110419005,
+ "kept": [
+  "Use configured DataLoader workers, pinned batches, and persistent workers to overlap MNIST loading with GPU training."
+ ],
+ "attempts": [
+  {
+   "change": "Use configured DataLoader workers, pinned batches, and persistent workers to overlap MNIST loading with GPU training.",
+   "keep": true,
+   "reason": "2.08x faster, loss within noise",
+   "speedup": 2.0768879955438244
+  },
+  {
+   "change": "Transfer pinned image batches to CUDA non-blockingly to avoid a synchronous host-device copy.",
+   "keep": false,
+   "reason": "0.99x is within noise",
+   "speedup": 0.9944648890553531
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   27.671562240000007,
+   29.453235100000015
+  ],
+  "candidate_ms": [
+   13.854555280000014,
+   14.308703019999989
+  ],
+  "baseline_loss": [
+   0.6472933113574981,
+   0.674088595310847
+  ],
+  "candidate_loss": [
+   0.6462940951188405,
+   0.6741164008776347
+  ]
+ },
+ "turns": 9,
+ "tokens": {
+  "input": 68238,
+  "output": 598
+ },
+ "stopped": null
+}

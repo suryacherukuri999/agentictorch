@@ -1,0 +1,69 @@
+{
+ "target": "efficient-kan",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 19.75427075999999,
+ "measured_speedup": 3.582406686019477,
+ "speedup": 3.582406686019477,
+ "kept": [
+  "Overlap unchanged MNIST transforms with training using four persistent DataLoader workers.",
+  "Compile the unchanged KAN model in reduce-overhead mode to fuse spline operations and reduce launch overhead.",
+  "Use pinned DataLoader batches and nonblocking transfers; transfer labels once per batch rather than twice."
+ ],
+ "attempts": [
+  {
+   "change": "Overlap unchanged MNIST transforms with training using four persistent DataLoader workers.",
+   "keep": true,
+   "reason": "2.46x faster, loss within noise",
+   "speedup": 2.461607901113584
+  },
+  {
+   "change": "Compile the unchanged KAN model in reduce-overhead mode to fuse spline operations and reduce launch overhead.",
+   "keep": true,
+   "reason": "1.28x faster, loss within noise",
+   "speedup": 1.2783193978104954
+  },
+  {
+   "change": "Use pinned DataLoader batches and nonblocking transfers; transfer labels once per batch rather than twice.",
+   "keep": true,
+   "reason": "1.07x faster, loss within noise",
+   "speedup": 1.0677455081245362
+  },
+  {
+   "change": "Use fused CUDA AdamW with the same optimizer hyperparameters to reduce optimizer kernel launches.",
+   "keep": false,
+   "reason": "1.01x is within noise",
+   "speedup": 1.0137174759270742
+  },
+  {
+   "change": "Compile the existing AdamW step to fuse optimizer arithmetic without changing optimizer settings or logged metrics.",
+   "keep": false,
+   "reason": "0.92x is within noise",
+   "speedup": 0.9213442578234305
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   19.688974520000002,
+   18.534023400000024
+  ],
+  "candidate_ms": [
+   5.52969927999996,
+   5.142111819999968
+  ],
+  "baseline_loss": [
+   0.7391134023666381,
+   0.7077982902526856
+  ],
+  "candidate_loss": [
+   0.7391133864720663,
+   0.7077982942263286
+  ]
+ },
+ "turns": 24,
+ "tokens": {
+  "input": 200614,
+  "output": 1613
+ },
+ "stopped": null
+}

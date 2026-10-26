@@ -1,0 +1,43 @@
+{
+ "target": "ganilla",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 124.07361184000003,
+ "measured_speedup": 1.4638121275721963,
+ "speedup": 1.4638121275721963,
+ "kept": [
+  "llm-kb patch, made without measuring"
+ ],
+ "attempts": [
+  {
+   "change": "llm-kb patch, made without measuring",
+   "keep": true,
+   "reason": "1.46x faster, loss within noise",
+   "speedup": 1.4638121275721963
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   131.59393777999995,
+   116.5532859000001
+  ],
+  "candidate_ms": [
+   100.66229352000049,
+   71.10872659999984
+  ],
+  "baseline_loss": [
+   3.506420695119434,
+   3.7109932094812392
+  ],
+  "candidate_loss": [
+   3.4508057832717896,
+   3.7002972761789956
+  ]
+ },
+ "turns": 6,
+ "tokens": {
+  "input": 61833,
+  "output": 824
+ },
+ "stopped": null
+}

@@ -1,0 +1,23 @@
+{
+ "target": "bench-resnet-workers0",
+ "model": "rules",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 122.92081545999994,
+ "measured_speedup": 2.4464581201298046,
+ "speedup": 2.4464581201298046,
+ "kept": [
+  "rules: train.py:65: DataLoader workers"
+ ],
+ "attempts": [
+  {
+   "change": "rules: train.py:65: DataLoader workers",
+   "keep": true,
+   "reason": "2.45x faster, loss within noise"
+  }
+ ],
+ "turns": 0,
+ "tokens": {
+  "input": 0,
+  "output": 0
+ }
+}

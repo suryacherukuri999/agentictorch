@@ -1,0 +1,62 @@
+{
+ "target": "simclr",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 418.41069631999994,
+ "measured_speedup": 2.059691766253816,
+ "speedup": 2.059691766253816,
+ "kept": [
+  "Use CUDA bfloat16 autocast for model and contrastive loss to accelerate convolution and tensor-core operations.",
+  "Convert ResNet and input batches to channels_last, which can improve convolution throughput with bfloat16."
+ ],
+ "attempts": [
+  {
+   "change": "Use CUDA bfloat16 autocast for model and contrastive loss to accelerate convolution and tensor-core operations.",
+   "keep": true,
+   "reason": "1.57x faster, loss within noise",
+   "speedup": 1.567403550222129
+  },
+  {
+   "change": "Convert ResNet and input batches to channels_last, which can improve convolution throughput with bfloat16.",
+   "keep": true,
+   "reason": "1.20x faster, loss within noise",
+   "speedup": 1.2011345913209517
+  },
+  {
+   "change": "Set gradients to None during zero_grad to avoid zero-filling gradient buffers each step.",
+   "keep": false,
+   "reason": "1.00x is within noise",
+   "speedup": 0.9988209217261229
+  },
+  {
+   "change": "Create contrastive-loss labels directly on the target device, avoiding a CPU allocation and host-to-device copy.",
+   "keep": false,
+   "reason": "1.01x is within noise",
+   "speedup": 1.0113906786831033
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   394.1062476800001,
+   395.67908489999996
+  ],
+  "candidate_ms": [
+   188.51590919999992,
+   194.98622962
+  ],
+  "baseline_loss": [
+   5.291406504313151,
+   5.238065846761068
+  ],
+  "candidate_loss": [
+   5.299652481079102,
+   5.257666047414144
+  ]
+ },
+ "turns": 16,
+ "tokens": {
+  "input": 114102,
+  "output": 829
+ },
+ "stopped": null
+}

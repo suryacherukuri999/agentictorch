@@ -1,0 +1,61 @@
+{
+ "target": "pytorch-wgan",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 77.89033810999999,
+ "measured_speedup": 1.1785407033228055,
+ "speedup": 1.1785407033228055,
+ "kept": [
+  "Use four persistent DataLoader workers and pinned batches to overlap CIFAR loading and host-to-device transfers."
+ ],
+ "attempts": [
+  {
+   "change": "Use four persistent DataLoader workers and pinned batches to overlap CIFAR loading and host-to-device transfers.",
+   "keep": true,
+   "reason": "1.18x faster, loss within noise",
+   "speedup": 1.1814401061767932
+  },
+  {
+   "change": "Enable fused CUDA Adam implementations to reduce optimizer kernel launches without changing optimizer math.",
+   "keep": false,
+   "reason": "0.98x is within noise",
+   "speedup": 0.9778759627444413
+  },
+  {
+   "change": "Increase persistent DataLoader workers from four to eight to further reduce measured input wait.",
+   "keep": false,
+   "reason": "1.01x is within noise",
+   "speedup": 1.0071655757580968
+  },
+  {
+   "change": "Create scalar sign tensors directly on the active device, avoiding CPU allocation and device-copy synchronization.",
+   "keep": false,
+   "reason": "1.00x is within noise",
+   "speedup": 1.0008152666247372
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   77.10429763999997,
+   79.1687628999999
+  ],
+  "candidate_ms": [
+   65.00670752000005,
+   67.60597820000001
+  ],
+  "baseline_loss": [
+   -7.7326044056150645,
+   -6.96172768274943
+  ],
+  "candidate_loss": [
+   -7.727192163467407,
+   -6.952044328053792
+  ]
+ },
+ "turns": 16,
+ "tokens": {
+  "input": 161528,
+  "output": 982
+ },
+ "stopped": null
+}

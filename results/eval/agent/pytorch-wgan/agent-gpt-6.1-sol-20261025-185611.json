@@ -1,0 +1,70 @@
+{
+ "target": "pytorch-wgan",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 78.48676399000001,
+ "measured_speedup": 1.4057312373572324,
+ "speedup": 1.4057312373572324,
+ "kept": [
+  "Overlap data preparation using four persistent DataLoader workers and pinned memory; use non-blocking CUDA transfers.",
+  "Disable autograd for generator forwards in critic updates, eliminating generator gradients that were discarded before its optimizer step.",
+  "Enable cuDNN autotuning to select faster convolution algorithms for the fixed training shapes.",
+  "Use fused CUDA Adam for both optimizers with unchanged learning rate, betas, and update semantics."
+ ],
+ "attempts": [
+  {
+   "change": "Overlap data preparation using four persistent DataLoader workers and pinned memory; use non-blocking CUDA transfers.",
+   "keep": true,
+   "reason": "1.16x faster, loss within noise",
+   "speedup": 1.1563641722167097
+  },
+  {
+   "change": "Disable autograd for generator forwards in critic updates, eliminating generator gradients that were discarded before its optimizer step.",
+   "keep": true,
+   "reason": "1.10x faster, loss within noise",
+   "speedup": 1.097355972652599
+  },
+  {
+   "change": "Enable cuDNN autotuning to select faster convolution algorithms for the fixed training shapes.",
+   "keep": true,
+   "reason": "1.05x faster, loss within noise",
+   "speedup": 1.0519612741921538
+  },
+  {
+   "change": "Use fused CUDA Adam for both optimizers with unchanged learning rate, betas, and update semantics.",
+   "keep": true,
+   "reason": "1.04x faster, loss within noise",
+   "speedup": 1.043711117064782
+  },
+  {
+   "change": "Reduce gradient-penalty transfer overhead: asynchronously copy unexpanded CPU-sampled eta and allocate gradient seeds directly on the output device.",
+   "keep": false,
+   "reason": "1.01x is within noise",
+   "speedup": 1.0070772483396695
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   76.67808282000003,
+   76.58805758
+  ],
+  "candidate_ms": [
+   54.815615580000106,
+   54.21549333999999
+  ],
+  "baseline_loss": [
+   -7.721579247050815,
+   -6.947507784101698
+  ],
+  "candidate_loss": [
+   -7.7097449686792165,
+   -6.935423013899062
+  ]
+ },
+ "turns": 23,
+ "tokens": {
+  "input": 230007,
+  "output": 1788
+ },
+ "stopped": null
+}

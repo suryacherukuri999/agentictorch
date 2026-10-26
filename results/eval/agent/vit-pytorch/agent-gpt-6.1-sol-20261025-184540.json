@@ -1,0 +1,69 @@
+{
+ "target": "vit-pytorch",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 26.428633159999997,
+ "measured_speedup": 2.4321886424843933,
+ "speedup": 2.4321886424843933,
+ "kept": [
+  "Overlap CIFAR preprocessing with training using four persistent DataLoader workers and pinned host memory.",
+  "Use PyTorch SDPA for equivalent attention with optimized kernels and fewer intermediate tensors.",
+  "Compile the model in reduce-overhead mode to fuse pointwise/decorrelation operations and reduce kernel-launch overhead."
+ ],
+ "attempts": [
+  {
+   "change": "Overlap CIFAR preprocessing with training using four persistent DataLoader workers and pinned host memory.",
+   "keep": true,
+   "reason": "1.29x faster, loss within noise",
+   "speedup": 1.290912070858449
+  },
+  {
+   "change": "Use PyTorch SDPA for equivalent attention with optimized kernels and fewer intermediate tensors.",
+   "keep": true,
+   "reason": "1.27x faster, loss within noise",
+   "speedup": 1.2682645673830686
+  },
+  {
+   "change": "Compile the model in reduce-overhead mode to fuse pointwise/decorrelation operations and reduce kernel-launch overhead.",
+   "keep": true,
+   "reason": "1.51x faster, loss within noise",
+   "speedup": 1.512018441886132
+  },
+  {
+   "change": "Use fused Adam to consolidate optimizer updates while retaining the same Adam hyperparameters.",
+   "keep": false,
+   "reason": "1.01x is within noise",
+   "speedup": 1.0119067500727905
+  },
+  {
+   "change": "Enable nonblocking Accelerate batch transfers from the pinned DataLoader to avoid two host-device synchronizations per step.",
+   "keep": false,
+   "reason": "1.03x is within noise",
+   "speedup": 1.0269023503899297
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   27.81762146000002,
+   27.331144399999804
+  ],
+  "candidate_ms": [
+   11.542069480000237,
+   11.135240799999906
+  ],
+  "baseline_loss": [
+   4.574062252044678,
+   4.551389058430989
+  ],
+  "candidate_loss": [
+   4.574062220255533,
+   4.551389090220133
+  ]
+ },
+ "turns": 22,
+ "tokens": {
+  "input": 184752,
+  "output": 1141
+ },
+ "stopped": null
+}

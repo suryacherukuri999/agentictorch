@@ -1,0 +1,48 @@
+{
+ "target": "detr",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 207.87193077,
+ "measured_speedup": null,
+ "speedup": 1.0,
+ "kept": [],
+ "attempts": [
+  {
+   "change": "Replace blocking GIoU box assertions with asynchronous device assertions, preserving validity checks without 24 host synchronizations per step.",
+   "keep": false,
+   "reason": "1.05x is within noise",
+   "speedup": 1.0546816058118198
+  },
+  {
+   "change": "Use bfloat16 autocast for model forward and float32 for Hungarian matching and losses; backward remains outside autocast.",
+   "keep": false,
+   "reason": "1.03x is within noise",
+   "speedup": 1.030472321249531
+  },
+  {
+   "change": "Pack Hungarian assignment indices and transfer once to the prediction device, eliminating repeated implicit CPU-index transfers during criterion indexing.",
+   "keep": false,
+   "reason": "1.04x is within noise",
+   "speedup": 1.0376963147999037
+  },
+  {
+   "change": "Compile the ResNet backbone in place with dynamic shapes to fuse normalization/elementwise kernels while preserving model and checkpoint structure.",
+   "keep": false,
+   "reason": "0.97x is within noise",
+   "speedup": 0.972124518859542
+  },
+  {
+   "change": "Use fused CUDA AdamW to reduce optimizer kernel launches without changing optimizer settings or parameter groups.",
+   "keep": false,
+   "reason": "1.04x is within noise",
+   "speedup": 1.0380526183050331
+  }
+ ],
+ "final_pair": null,
+ "turns": 21,
+ "tokens": {
+  "input": 326978,
+  "output": 1674
+ },
+ "stopped": null
+}

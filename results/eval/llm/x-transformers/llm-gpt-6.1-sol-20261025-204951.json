@@ -1,0 +1,43 @@
+{
+ "target": "x-transformers",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 705.34163074,
+ "measured_speedup": 5.606755697011942,
+ "speedup": 5.606755697011942,
+ "kept": [
+  "llm patch, made without measuring"
+ ],
+ "attempts": [
+  {
+   "change": "llm patch, made without measuring",
+   "keep": true,
+   "reason": "5.61x faster, loss within noise",
+   "speedup": 5.606755697011942
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   713.9030204400001,
+   696.78024104
+  ],
+  "candidate_ms": [
+   128.22546425999974,
+   123.40634788000017
+  ],
+  "baseline_loss": [
+   0.6622527122497559,
+   0.6656793594360352
+  ],
+  "candidate_loss": [
+   0.6627066195011139,
+   0.6660938580830892
+  ]
+ },
+ "turns": 14,
+ "tokens": {
+  "input": 156297,
+  "output": 1667
+ },
+ "stopped": null
+}

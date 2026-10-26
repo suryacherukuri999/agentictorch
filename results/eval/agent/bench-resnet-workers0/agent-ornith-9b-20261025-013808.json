@@ -1,0 +1,43 @@
+{
+ "target": "bench-resnet-workers0",
+ "model": "ornith-1.5:9b",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 120.13512667,
+ "speedup": 2.5622340934040406,
+ "kept": [
+  "Increased DataLoader num_workers from 0 to 4 and added persistent_workers so CPU-bound augmentation runs in worker subprocesses, overlapping with GPU training and eliminating the 85% idle-GPU wait.",
+  "Added torch.compile to the model to fuse the ResNet-18 forward/backward ops and reduce kernel launch overhead on the now GPU-bound training loop."
+ ],
+ "attempts": [
+  {
+   "change": "Increased DataLoader num_workers from 0 to 4 and added persistent_workers so CPU-bound augmentation runs in worker subprocesses, overlapping with GPU training and eliminating the 85% idle-GPU wait.",
+   "keep": true,
+   "reason": "2.50x faster, loss within noise"
+  },
+  {
+   "change": "Added torch.compile to the model to fuse the ResNet-18 forward/backward ops and reduce kernel launch overhead on the now GPU-bound training loop.",
+   "keep": true,
+   "reason": "1.04x faster, loss within noise"
+  },
+  {
+   "change": "Tightened torch.compile to dynamic=False (fixed ResNet-18 architecture, no dynamic shapes) with reduce-overhead=True to fuse more ops and cut kernel launch overhead.",
+   "keep": false,
+   "reason": "run failed: no results (exit code 1)"
+  },
+  {
+   "change": "Added reduce-overhead=True to torch.compile to fuse ops and cut kernel launch overhead on the GPU-bound loop.",
+   "keep": false,
+   "reason": "run failed: no results (exit code 1)"
+  },
+  {
+   "change": "Added a custom collate_fn that batches samples into channels_last format on the CPU worker, so the per-step GPU transfer becomes a pure pinned-memory copy instead of a transpose+copy.",
+   "keep": false,
+   "reason": "run failed: UnboundLocalError: cannot access local variable '_channels_last_collate' where it is not associated with a value"
+  }
+ ],
+ "turns": 23,
+ "tokens": {
+  "input": 118644,
+  "output": 9409
+ }
+}

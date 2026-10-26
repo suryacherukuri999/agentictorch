@@ -1,0 +1,62 @@
+{
+ "target": "efficient-kan",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 17.287753279999993,
+ "measured_speedup": 3.4044884378428426,
+ "speedup": 3.4044884378428426,
+ "kept": [
+  "Use worker processes and pinned DataLoader batches with nonblocking CUDA transfers to reduce the measured data-loading wait.",
+  "Compile the KAN model to fuse operations and reduce Python and kernel-launch overhead."
+ ],
+ "attempts": [
+  {
+   "change": "Use worker processes and pinned DataLoader batches with nonblocking CUDA transfers to reduce the measured data-loading wait.",
+   "keep": true,
+   "reason": "2.58x faster, loss within noise",
+   "speedup": 2.583427180217122
+  },
+  {
+   "change": "Enable fused AdamW to combine optimizer operations and reduce GPU kernel overhead.",
+   "keep": false,
+   "reason": "1.04x is within noise",
+   "speedup": 1.0375852351088382
+  },
+  {
+   "change": "Set gradients to None when clearing them to avoid zero-fill memory operations before backward.",
+   "keep": false,
+   "reason": "0.90x is within noise",
+   "speedup": 0.896527991038089
+  },
+  {
+   "change": "Compile the KAN model to fuse operations and reduce Python and kernel-launch overhead.",
+   "keep": true,
+   "reason": "1.37x faster, loss within noise",
+   "speedup": 1.365874793876027
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   16.428144780000018,
+   11.657965899999995
+  ],
+  "candidate_ms": [
+   4.49737380000002,
+   3.674079840000033
+  ],
+  "baseline_loss": [
+   0.7391134023666381,
+   0.7077982862790425
+  ],
+  "candidate_loss": [
+   0.7391133944193522,
+   0.7077982981999715
+  ]
+ },
+ "turns": 24,
+ "tokens": {
+  "input": 132685,
+  "output": 1183
+ },
+ "stopped": null
+}

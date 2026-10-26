@@ -1,0 +1,62 @@
+{
+ "target": "jointbert",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 140.01923078,
+ "measured_speedup": 2.391290355528437,
+ "speedup": 2.391290355528437,
+ "kept": [
+  "Enable fused AdamW to combine optimizer math into fewer GPU kernels.",
+  "Use CUDA float16 autocast for transformer forward and loss to accelerate tensor-core operations."
+ ],
+ "attempts": [
+  {
+   "change": "Enable fused AdamW to combine optimizer math into fewer GPU kernels.",
+   "keep": true,
+   "reason": "1.15x faster, loss within noise",
+   "speedup": 1.1524888672920148
+  },
+  {
+   "change": "Use CUDA float16 autocast for transformer forward and loss to accelerate tensor-core operations.",
+   "keep": true,
+   "reason": "1.98x faster, loss within noise",
+   "speedup": 1.9766257330316712
+  },
+  {
+   "change": "Accumulate detached loss on device and synchronize once at training end instead of calling loss.item() every step.",
+   "keep": false,
+   "reason": "1.00x is within noise",
+   "speedup": 1.0029905988240335
+  },
+  {
+   "change": "Pin training batches and use nonblocking host-to-device copies to allow asynchronous transfers.",
+   "keep": false,
+   "reason": "1.04x is within noise",
+   "speedup": 1.0363822973965173
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   137.64128991999996,
+   139.96443932000005
+  ],
+  "candidate_ms": [
+   56.814109979999905,
+   59.29875981999999
+  ],
+  "baseline_loss": [
+   1.0939531048138937,
+   1.1951859712600708
+  ],
+  "candidate_loss": [
+   1.1383727669715882,
+   1.2052004933357239
+  ]
+ },
+ "turns": 19,
+ "tokens": {
+  "input": 137260,
+  "output": 889
+ },
+ "stopped": null
+}

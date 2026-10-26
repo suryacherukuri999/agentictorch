@@ -1,0 +1,42 @@
+{
+ "target": "transfusion-pytorch",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 85.31178661000001,
+ "measured_speedup": null,
+ "speedup": 1.0,
+ "kept": [],
+ "attempts": [
+  {
+   "change": "Use persistent DataLoader workers and pinned batches to overlap MNIST loading and host-to-device transfer.",
+   "keep": false,
+   "reason": "1.03x is within noise",
+   "speedup": 1.0348769431282163
+  },
+  {
+   "change": "Enable bfloat16 mixed precision through Accelerate to accelerate transformer math on the L4.",
+   "keep": false,
+   "reason": "0.88x is within noise",
+   "speedup": 0.8778793390996641
+  },
+  {
+   "change": "Avoid explicit loss.item() conversion before formatting the printed loss.",
+   "keep": false,
+   "reason": "0.87x is within noise",
+   "speedup": 0.8719774091648634
+  },
+  {
+   "change": "Try fp16 autocast on the L4 as an alternative mixed-precision mode.",
+   "keep": false,
+   "reason": "0.90x is within noise",
+   "speedup": 0.9034826317130946
+  }
+ ],
+ "final_pair": null,
+ "turns": 16,
+ "tokens": {
+  "input": 84725,
+  "output": 683
+ },
+ "stopped": null
+}

@@ -1,0 +1,43 @@
+{
+ "target": "jointbert",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 140.69779009,
+ "measured_speedup": 1.6959395474397603,
+ "speedup": 1.6959395474397603,
+ "kept": [
+  "llm-kb patch, made without measuring"
+ ],
+ "attempts": [
+  {
+   "change": "llm-kb patch, made without measuring",
+   "keep": true,
+   "reason": "1.70x faster, loss within noise",
+   "speedup": 1.6959395474397603
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   136.12963538000002,
+   145.2659448
+  ],
+  "candidate_ms": [
+   82.82660636000003,
+   83.00913566
+  ],
+  "baseline_loss": [
+   1.0939531048138937,
+   1.1951859712600708
+  ],
+  "candidate_loss": [
+   1.1275585571924844,
+   1.2052857955296834
+  ]
+ },
+ "turns": 8,
+ "tokens": {
+  "input": 32303,
+  "output": 426
+ },
+ "stopped": null
+}

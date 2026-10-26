@@ -1,0 +1,42 @@
+{
+ "target": "detr",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 204.96896268,
+ "measured_speedup": null,
+ "speedup": 1.0,
+ "kept": [],
+ "attempts": [
+  {
+   "change": "Use CUDA bfloat16 autocast for training forward and criterion to accelerate L4 tensor operations while retaining full-precision optimizer parameters.",
+   "keep": false,
+   "reason": "0.99x is within noise",
+   "speedup": 0.993383021198263
+  },
+  {
+   "change": "Avoid GPU-synchronizing tensor assertions in generalized_box_iou by guarding them during compilation.",
+   "keep": false,
+   "reason": "0.98x is within noise",
+   "speedup": 0.9843862799125004
+  },
+  {
+   "change": "Enable DataLoader pinned memory and nonblocking target transfers to reduce host-to-device transfer overhead.",
+   "keep": false,
+   "reason": "1.03x is within noise",
+   "speedup": 1.0284787578809946
+  },
+  {
+   "change": "Defer scalar conversion of reduced loss to MetricLogger, removing an explicit per-step GPU synchronization.",
+   "keep": false,
+   "reason": "1.01x is within noise",
+   "speedup": 1.0076444839064667
+  }
+ ],
+ "final_pair": null,
+ "turns": 22,
+ "tokens": {
+  "input": 358724,
+  "output": 1799
+ },
+ "stopped": null
+}

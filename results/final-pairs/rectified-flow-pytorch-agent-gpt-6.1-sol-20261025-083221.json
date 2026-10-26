@@ -1,0 +1,67 @@
+{
+ "target": "rectified-flow-pytorch",
+ "repo": "https://github.com/lucidrains/rectified-flow-pytorch",
+ "commit": "688cad582422f807adffb32ab8f8bf511fec1e89",
+ "command": "HF_HOME=hf HF_HUB_OFFLINE=1 HF_DATASETS_OFFLINE=1 python train_oxford.py",
+ "baseline_args": "",
+ "candidate_args": "",
+ "change": "gpt-6.1-sol agent: DataLoader workers, torch.compile of the Unet, bf16, fused Adam",
+ "gpu": "NVIDIA L4",
+ "recorded": "2026-10-25T15:40:45+00:00",
+ "baseline": [
+  {
+   "seed": 0,
+   "completed": true,
+   "step_ms": 436.93042990000004,
+   "data_wait_ms": 60.77144009999998,
+   "peak_mem_allocated": 6264768000,
+   "loss_tail": 1.6315745035807292,
+   "gpu": "NVIDIA L4",
+   "cpu": "GenuineIntel family 6 model 85",
+   "container": "ta-01M5SV10HZJGTMHYJ78CWKYAGR",
+   "torch": "2.14.1+cu130"
+  },
+  {
+   "seed": 1,
+   "completed": true,
+   "step_ms": 430.94823273999964,
+   "data_wait_ms": 59.53881693999847,
+   "peak_mem_allocated": 6264768000,
+   "loss_tail": 4.065706598758697,
+   "gpu": "NVIDIA L4",
+   "cpu": "GenuineIntel family 6 model 85",
+   "container": "ta-01M5SV123R2YY6P3V3K9NJWQ7R",
+   "torch": "2.14.1+cu130"
+  }
+ ],
+ "candidate": [
+  {
+   "seed": 0,
+   "completed": true,
+   "step_ms": 140.09541923999905,
+   "data_wait_ms": 0.21742917999972633,
+   "peak_mem_allocated": 3906705408,
+   "loss_tail": 1.6636165400346121,
+   "gpu": "NVIDIA L4",
+   "cpu": "GenuineIntel family 6 model 85",
+   "container": "ta-01M5SV10HZJGTMHYJ78CWKYAGR",
+   "torch": "2.14.1+cu130"
+  },
+  {
+   "seed": 1,
+   "completed": true,
+   "step_ms": 136.99335614000006,
+   "data_wait_ms": 0.15195602000062536,
+   "peak_mem_allocated": 3906705408,
+   "loss_tail": 4.052381801605224,
+   "gpu": "NVIDIA L4",
+   "cpu": "GenuineIntel family 6 model 85",
+   "container": "ta-01M5SV123R2YY6P3V3K9NJWQ7R",
+   "torch": "2.14.1+cu130"
+  }
+ ],
+ "speedup": 3.1322540379225194,
+ "keep": true,
+ "reason": "3.13x faster, loss within noise",
+ "diff": "diff --git a/rectified_flow_pytorch/rectified_flow.py b/rectified_flow_pytorch/rectified_flow.py\nindex dee8fda..4f890d0 100644\n--- a/rectified_flow_pytorch/rectified_flow.py\n+++ b/rectified_flow_pytorch/rectified_flow.py\n@@ -1194,7 +1194,8 @@ class Trainer(Module):\n         # optimizer, dataloader, and all that\n \n         self.optimizer = Adam(rectified_flow.parameters(), lr = learning_rate, **adam_kwargs)\n-        self.dl = DataLoader(dataset, batch_size = batch_size, shuffle = True, drop_last = True)\n+        self.dl = DataLoader(dataset, batch_size = batch_size, shuffle = True, drop_last = True,\n+            num_workers = 4, pin_memory = True, persistent_workers = True)\n \n         self.model, self.optimizer, self.dl = self.accelerator.prepare(self.model, self.optimizer, self.dl)\n \ndiff --git a/train_oxford.py b/train_oxford.py\nindex aa54174..391769d 100644\n--- a/train_oxford.py\n+++ b/train_oxford.py\n@@ -56,6 +56,8 @@ def train(\n         rectified_flow,\n         dataset = flowers_dataset,\n         batch_size = batch_size,\n+        accelerate_kwargs = dict(mixed_precision = 'bf16'),\n+        adam_kwargs = dict(fused = True),\n         num_train_steps = num_train_steps,\n         sample_temperature = sample_temperature,\n         save_results_every = save_results_every,\n@@ -63,6 +65,9 @@ def train(\n         clear_results_folder = clear_results_folder\n     )\n \n+    # Compile in place so checkpoint parameter names and the EMA model stay unchanged.\n+    model.compile()\n+\n     trainer()\n \n if __name__ == '__main__':\n"
+}

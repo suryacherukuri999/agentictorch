@@ -1,0 +1,63 @@
+{
+ "target": "pointnet2",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 276.11836902000005,
+ "measured_speedup": 4.892720041808847,
+ "speedup": 4.892720041808847,
+ "kept": [
+  "Replace boolean gather/scatter updates with equivalent dense torch.where to eliminate nonzero GPU synchronizations.",
+  "Fuse iterative farthest-point sampling into one Triton kernel, preserving initial RNG, float32 arithmetic and first-index argmax ties.",
+  "Use bfloat16 autocast for training convolutions and linear layers while preserving float32 geometry and sampling."
+ ],
+ "attempts": [
+  {
+   "change": "Replace boolean gather/scatter updates with equivalent dense torch.where to eliminate nonzero GPU synchronizations.",
+   "keep": true,
+   "reason": "1.56x faster, loss within noise",
+   "speedup": 1.5586871069569685
+  },
+  {
+   "change": "Fuse iterative farthest-point sampling into one Triton kernel, preserving initial RNG, float32 arithmetic and first-index argmax ties.",
+   "keep": true,
+   "reason": "1.95x faster, loss within noise",
+   "speedup": 1.9521417725912147
+  },
+  {
+   "change": "Use bfloat16 autocast for training convolutions and linear layers while preserving float32 geometry and sampling.",
+   "keep": true,
+   "reason": "1.66x faster, loss within noise",
+   "speedup": 1.6614757613894429
+  },
+  {
+   "change": "Use channels-last layout for grouped convolution activations and model convolution weights to improve bfloat16 Tensor Core and memory efficiency.",
+   "keep": false,
+   "reason": "0.96x is within noise",
+   "speedup": 0.9641882716032597
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   281.38685052,
+   278.14945014000006
+  ],
+  "candidate_ms": [
+   57.10390346000011,
+   57.25527106000001
+  ],
+  "baseline_loss": [
+   3.003043556213379,
+   3.013991038004557
+  ],
+  "candidate_loss": [
+   2.976041142145793,
+   3.0513812065124513
+  ]
+ },
+ "turns": 24,
+ "tokens": {
+  "input": 269166,
+  "output": 3060
+ },
+ "stopped": null
+}

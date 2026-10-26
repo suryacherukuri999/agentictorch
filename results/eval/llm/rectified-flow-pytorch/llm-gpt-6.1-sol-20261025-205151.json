@@ -1,0 +1,43 @@
+{
+ "target": "rectified-flow-pytorch",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 446.36061745000006,
+ "measured_speedup": 3.1656384915910163,
+ "speedup": 3.1656384915910163,
+ "kept": [
+  "llm patch, made without measuring"
+ ],
+ "attempts": [
+  {
+   "change": "llm patch, made without measuring",
+   "keep": true,
+   "reason": "3.17x faster, loss within noise",
+   "speedup": 3.1656384915910163
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   438.05574728000005,
+   454.6654876200001
+  ],
+  "candidate_ms": [
+   141.42187066000133,
+   140.53424296000003
+  ],
+  "baseline_loss": [
+   1.6303690413633982,
+   4.069010472297668
+  ],
+  "candidate_loss": [
+   1.7908780833085378,
+   4.149383533000946
+  ]
+ },
+ "turns": 10,
+ "tokens": {
+  "input": 82052,
+  "output": 1758
+ },
+ "stopped": null
+}

@@ -1,0 +1,38 @@
+{
+ "target": "detr",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 211.24408384999998,
+ "measured_speedup": null,
+ "speedup": 1.0,
+ "kept": [],
+ "attempts": [
+  {
+   "change": "llm patch, made without measuring",
+   "keep": false,
+   "reason": "run failed: timed out",
+   "speedup": null
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   214.60430624000003,
+   207.88386145999993
+  ],
+  "candidate_ms": null,
+  "baseline_loss": [
+   46.471562194824216,
+   50.2247922261556
+  ],
+  "candidate_loss": [
+   null,
+   null
+  ]
+ },
+ "turns": 23,
+ "tokens": {
+  "input": 516142,
+  "output": 4178
+ },
+ "stopped": null
+}

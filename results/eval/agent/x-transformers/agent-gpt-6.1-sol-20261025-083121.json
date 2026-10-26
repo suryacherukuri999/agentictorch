@@ -1,0 +1,70 @@
+{
+ "target": "x-transformers",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 694.9172676000001,
+ "measured_speedup": 5.515241206434697,
+ "speedup": 5.515241206434697,
+ "kept": [
+  "Enable the existing SDPA attention implementation to fuse attention and avoid quadratic intermediate tensors.",
+  "Use Accelerate bfloat16 mixed precision to enable L4 Tensor Cores and fused low-precision attention, retaining FP32 parameters.",
+  "Compile the model forward with torch.compile to fuse pointwise work and reduce Python/kernel-launch overhead.",
+  "Use fused CUDA Adam with unchanged optimizer hyperparameters to reduce optimizer kernel launches and memory traffic."
+ ],
+ "attempts": [
+  {
+   "change": "Keep dataset samples on CPU, pin collated batches, and transfer once per batch nonblocking instead of once per sample.",
+   "keep": false,
+   "reason": "1.00x is within noise",
+   "speedup": 1.004666401780185
+  },
+  {
+   "change": "Enable the existing SDPA attention implementation to fuse attention and avoid quadratic intermediate tensors.",
+   "keep": true,
+   "reason": "1.78x faster, loss within noise",
+   "speedup": 1.7790461958034334
+  },
+  {
+   "change": "Use Accelerate bfloat16 mixed precision to enable L4 Tensor Cores and fused low-precision attention, retaining FP32 parameters.",
+   "keep": true,
+   "reason": "2.20x faster, loss within noise",
+   "speedup": 2.199562910339252
+  },
+  {
+   "change": "Compile the model forward with torch.compile to fuse pointwise work and reduce Python/kernel-launch overhead.",
+   "keep": true,
+   "reason": "1.37x faster, loss within noise",
+   "speedup": 1.3708448513622626
+  },
+  {
+   "change": "Use fused CUDA Adam with unchanged optimizer hyperparameters to reduce optimizer kernel launches and memory traffic.",
+   "keep": true,
+   "reason": "1.03x faster, loss within noise",
+   "speedup": 1.0319657676213734
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   689.68900856,
+   712.066026
+  ],
+  "candidate_ms": [
+   123.84403248000014,
+   130.36753793999992
+  ],
+  "baseline_loss": [
+   0.6622527122497559,
+   0.6656793594360352
+  ],
+  "candidate_loss": [
+   0.6626009364922841,
+   0.666055456797282
+  ]
+ },
+ "turns": 26,
+ "tokens": {
+  "input": 211505,
+  "output": 1433
+ },
+ "stopped": null
+}

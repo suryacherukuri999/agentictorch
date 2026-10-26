@@ -1,0 +1,38 @@
+{
+ "target": "pytorch-ddpm",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 545.8242275400005,
+ "measured_speedup": null,
+ "speedup": 1.0,
+ "kept": [],
+ "attempts": [
+  {
+   "change": "llm-kb patch, made without measuring",
+   "keep": false,
+   "reason": "run failed: KeyError: '_orig_mod.time_embedding.timembedding.0.weight'",
+   "speedup": null
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   541.2460462199999,
+   550.4024088600011
+  ],
+  "candidate_ms": null,
+  "baseline_loss": [
+   0.9945616165796916,
+   0.9946566383043925
+  ],
+  "candidate_loss": [
+   1.0023530721664429,
+   0.9988800883293152
+  ]
+ },
+ "turns": 7,
+ "tokens": {
+  "input": 60865,
+  "output": 756
+ },
+ "stopped": null
+}

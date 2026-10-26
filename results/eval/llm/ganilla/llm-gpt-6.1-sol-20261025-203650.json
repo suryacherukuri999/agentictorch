@@ -1,0 +1,43 @@
+{
+ "target": "ganilla",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 125.91859524000026,
+ "measured_speedup": 1.5382921719175282,
+ "speedup": 1.5382921719175282,
+ "kept": [
+  "llm patch, made without measuring"
+ ],
+ "attempts": [
+  {
+   "change": "llm patch, made without measuring",
+   "keep": true,
+   "reason": "1.54x faster, loss within noise",
+   "speedup": 1.5382921719175282
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   132.76422566000002,
+   119.0729648200005
+  ],
+  "candidate_ms": [
+   104.19485554000005,
+   64.11657238000004
+  ],
+  "baseline_loss": [
+   3.464051752620273,
+   3.589835136466556
+  ],
+  "candidate_loss": [
+   3.5657270444764033,
+   3.8050738831361133
+  ]
+ },
+ "turns": 11,
+ "tokens": {
+  "input": 146996,
+  "output": 2031
+ },
+ "stopped": null
+}

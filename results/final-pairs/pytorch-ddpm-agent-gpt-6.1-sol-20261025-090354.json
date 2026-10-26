@@ -1,0 +1,67 @@
+{
+ "target": "pytorch-ddpm",
+ "repo": "https://github.com/w86763777/pytorch-ddpm",
+ "commit": "f804ccbd58a758b07f79a3b9ecdfb1beb67258f6",
+ "command": "python main.py --train --flagfile ./config/CIFAR10.txt",
+ "baseline_args": "",
+ "candidate_args": "",
+ "change": "gpt-6.1-sol agent: bf16 autocast, torch.compile of the trainer, channels_last",
+ "gpu": "NVIDIA L4",
+ "recorded": "2026-10-25T15:38:16+00:00",
+ "baseline": [
+  {
+   "seed": 0,
+   "completed": true,
+   "step_ms": 560.2539439600002,
+   "data_wait_ms": 2.5228273800001944,
+   "peak_mem_allocated": 8594809856,
+   "loss_tail": 0.9945616046587626,
+   "gpu": "NVIDIA L4",
+   "cpu": "GenuineIntel family 6 model 85",
+   "container": "ta-01M5SV0BB41KAVRZBAZAJTQAKR",
+   "torch": "2.14.1+cu130"
+  },
+  {
+   "seed": 1,
+   "completed": true,
+   "step_ms": 550.3168414200002,
+   "data_wait_ms": 2.477055020003718,
+   "peak_mem_allocated": 8594809856,
+   "loss_tail": 0.9946566383043925,
+   "gpu": "NVIDIA L4",
+   "cpu": "GenuineIntel family 6 model 85",
+   "container": "ta-01M5SV0EWWTZDM9XGJYZEXMQ8R",
+   "torch": "2.14.1+cu130"
+  }
+ ],
+ "candidate": [
+  {
+   "seed": 0,
+   "completed": true,
+   "step_ms": 220.27039833999993,
+   "data_wait_ms": 2.430542359999208,
+   "peak_mem_allocated": 3393353216,
+   "loss_tail": 0.99522864818573,
+   "gpu": "NVIDIA L4",
+   "cpu": "GenuineIntel family 6 model 85",
+   "container": "ta-01M5SV0BB41KAVRZBAZAJTQAKR",
+   "torch": "2.14.1+cu130"
+  },
+  {
+   "seed": 1,
+   "completed": true,
+   "step_ms": 217.21088441999996,
+   "data_wait_ms": 2.7617869600044287,
+   "peak_mem_allocated": 3393353216,
+   "loss_tail": 0.9957121809323629,
+   "gpu": "NVIDIA L4",
+   "cpu": "GenuineIntel family 6 model 85",
+   "container": "ta-01M5SV0EWWTZDM9XGJYZEXMQ8R",
+   "torch": "2.14.1+cu130"
+  }
+ ],
+ "speedup": 2.5385165699986856,
+ "keep": true,
+ "reason": "2.54x faster, loss within noise",
+ "diff": "diff --git a/main.py b/main.py\nindex c6e0774..50f9831 100644\n--- a/main.py\n+++ b/main.py\n@@ -110,6 +110,7 @@ def train():\n     net_model = UNet(\n         T=FLAGS.T, ch=FLAGS.ch, ch_mult=FLAGS.ch_mult, attn=FLAGS.attn,\n         num_res_blocks=FLAGS.num_res_blocks, dropout=FLAGS.dropout)\n+    net_model = net_model.to(memory_format=torch.channels_last)\n     ema_model = copy.deepcopy(net_model)\n     optim = torch.optim.Adam(net_model.parameters(), lr=FLAGS.lr)\n     sched = torch.optim.lr_scheduler.LambdaLR(optim, lr_lambda=warmup_lr)\n@@ -126,6 +127,8 @@ def train():\n         net_sampler = torch.nn.DataParallel(net_sampler)\n         ema_sampler = torch.nn.DataParallel(ema_sampler)\n \n+    trainer.compile()\n+\n     # log setup\n     os.makedirs(os.path.join(FLAGS.logdir, 'sample'))\n     x_T = torch.randn(FLAGS.sample_size, 3, FLAGS.img_size, FLAGS.img_size)\n@@ -148,8 +151,9 @@ def train():\n         for step in pbar:\n             # train\n             optim.zero_grad()\n-            x_0 = next(datalooper).to(device)\n-            loss = trainer(x_0).mean()\n+            x_0 = next(datalooper).to(device, memory_format=torch.channels_last)\n+            with torch.autocast(device_type='cuda', dtype=torch.bfloat16):\n+                loss = trainer(x_0).mean()\n             loss.backward()\n             torch.nn.utils.clip_grad_norm_(\n                 net_model.parameters(), FLAGS.grad_clip)\n"
+}

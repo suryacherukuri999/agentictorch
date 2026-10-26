@@ -1,0 +1,43 @@
+{
+ "target": "pointnet2",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 283.79554798,
+ "measured_speedup": 1.928961392027273,
+ "speedup": 1.928961392027273,
+ "kept": [
+  "llm patch, made without measuring"
+ ],
+ "attempts": [
+  {
+   "change": "llm patch, made without measuring",
+   "keep": true,
+   "reason": "1.93x faster, loss within noise",
+   "speedup": 1.928961392027273
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   278.0057386,
+   289.58535736
+  ],
+  "candidate_ms": [
+   144.44263996000004,
+   149.79174183999993
+  ],
+  "baseline_loss": [
+   3.003043556213379,
+   3.013991038004557
+  ],
+  "candidate_loss": [
+   2.990985695521037,
+   3.0003212134043378
+  ]
+ },
+ "turns": 14,
+ "tokens": {
+  "input": 205598,
+  "output": 3395
+ },
+ "stopped": null
+}

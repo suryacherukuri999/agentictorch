@@ -1,0 +1,67 @@
+{
+ "target": "transfusion-pytorch",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 83.24838274999999,
+ "measured_speedup": 1.583373168600814,
+ "speedup": 1.583373168600814,
+ "kept": [
+  "Compile student and EMA transformers in place to fuse pointwise operations and reduce Python/kernel launch overhead."
+ ],
+ "attempts": [
+  {
+   "change": "Compile student and EMA transformers in place to fuse pointwise operations and reduce Python/kernel launch overhead.",
+   "keep": true,
+   "reason": "1.56x faster, loss within noise",
+   "speedup": 1.5600272056370506
+  },
+  {
+   "change": "Use existing FlexAttention implementation to fuse softcapped attention while retaining LASER value transform and all model parameters.",
+   "keep": false,
+   "reason": "1.01x is within noise",
+   "speedup": 1.0061954778847206
+  },
+  {
+   "change": "Enable Accelerate bfloat16 mixed precision for faster tensor-core matrix multiplications, leaving parameters and optimizer state in float32.",
+   "keep": false,
+   "reason": "0.97x is within noise",
+   "speedup": 0.9690078287343394
+  },
+  {
+   "change": "Use reduce-overhead transformer compilation to enable CUDA graph replay and lower host dispatch overhead.",
+   "keep": false,
+   "reason": "run failed: Search for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.",
+   "speedup": null
+  },
+  {
+   "change": "Keep EMA step and initialized bookkeeping buffers on CPU to avoid two device-to-host synchronization points per update without changing EMA scheduling or weights.",
+   "keep": false,
+   "reason": "1.06x is within noise",
+   "speedup": 1.0594631116616802
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   64.66248096000001,
+   98.47343223999985
+  ],
+  "candidate_ms": [
+   41.6112771600001,
+   61.03709149999986
+  ],
+  "baseline_loss": [
+   1.8111782153447469,
+   3.710127766927083
+  ],
+  "candidate_loss": [
+   1.8113372564315795,
+   3.7101246039072673
+  ]
+ },
+ "turns": 23,
+ "tokens": {
+  "input": 287289,
+  "output": 1553
+ },
+ "stopped": null
+}

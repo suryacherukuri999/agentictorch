@@ -1,0 +1,69 @@
+{
+ "target": "jointbert",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 139.81774212999997,
+ "measured_speedup": 2.7151501573012444,
+ "speedup": 2.7151501573012444,
+ "kept": [
+  "Use CUDA bfloat16 autocast for training forward and loss to accelerate BERT matmuls.",
+  "Enable fused CUDA AdamW to reduce optimizer kernel launches and memory traffic without changing hyperparameters.",
+  "Compile the BERT backbone in place to fuse operations and reduce Python/kernel-launch overhead, preserving checkpoint structure."
+ ],
+ "attempts": [
+  {
+   "change": "Use CUDA bfloat16 autocast for training forward and loss to accelerate BERT matmuls.",
+   "keep": true,
+   "reason": "1.75x faster, loss within noise",
+   "speedup": 1.7471672265069145
+  },
+  {
+   "change": "Enable fused CUDA AdamW to reduce optimizer kernel launches and memory traffic without changing hyperparameters.",
+   "keep": true,
+   "reason": "1.33x faster, loss within noise",
+   "speedup": 1.3254809429992074
+  },
+  {
+   "change": "Replace dynamic boolean indexing in slot cross entropy with ignore-index targets to avoid CUDA synchronization.",
+   "keep": false,
+   "reason": "0.95x is within noise",
+   "speedup": 0.9470739421546812
+  },
+  {
+   "change": "Compile the BERT backbone in place to fuse operations and reduce Python/kernel-launch overhead, preserving checkpoint structure.",
+   "keep": true,
+   "reason": "1.17x faster, loss within noise",
+   "speedup": 1.1713408872070163
+  },
+  {
+   "change": "Use pinned training batches and non-blocking device copies to avoid five blocking host-to-device transfers per step.",
+   "keep": false,
+   "reason": "1.02x is within noise",
+   "speedup": 1.0228126140746772
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   138.81348028000005,
+   140.01209529999983
+  ],
+  "candidate_ms": [
+   50.642498079999996,
+   52.05882628000012
+  ],
+  "baseline_loss": [
+   1.0939531048138937,
+   1.1951859712600708
+  ],
+  "candidate_loss": [
+   1.0971811612447102,
+   1.1810467441876729
+  ]
+ },
+ "turns": 23,
+ "tokens": {
+  "input": 213247,
+  "output": 1288
+ },
+ "stopped": null
+}

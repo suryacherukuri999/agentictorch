@@ -1,0 +1,41 @@
+{
+ "target": "transfusion-pytorch",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 81.88689657,
+ "measured_speedup": 0.8647244786112291,
+ "speedup": 1.0,
+ "kept": [],
+ "attempts": [
+  {
+   "change": "llm patch, made without measuring",
+   "keep": false,
+   "reason": "0.86x is within noise",
+   "speedup": 0.8647244786112291
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   99.51524184,
+   64.25855130000002
+  ],
+  "candidate_ms": [
+   121.32219507999991,
+   70.48955473999996
+  ],
+  "baseline_loss": [
+   1.8111782153447469,
+   3.710127766927083
+  ],
+  "candidate_loss": [
+   1.8639690717061361,
+   3.961164927482605
+  ]
+ },
+ "turns": 9,
+ "tokens": {
+  "input": 76075,
+  "output": 2779
+ },
+ "stopped": null
+}

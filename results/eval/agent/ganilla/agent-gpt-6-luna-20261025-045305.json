@@ -1,0 +1,42 @@
+{
+ "target": "ganilla",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 130.52005256,
+ "measured_speedup": null,
+ "speedup": 1.0,
+ "kept": [],
+ "attempts": [
+  {
+   "change": "Use CUDA float16 autocast for CycleGAN forward and backward passes to accelerate convolutions and reduce activation bandwidth.",
+   "keep": false,
+   "reason": "0.96x is within noise",
+   "speedup": 0.9554149055960356
+  },
+  {
+   "change": "Convert generator weights and input images to channels_last to improve convolution memory access.",
+   "keep": false,
+   "reason": "0.85x is within noise",
+   "speedup": 0.8471863032759679
+  },
+  {
+   "change": "Use fused CUDA Adam implementations to reduce optimizer kernel launches without changing update math.",
+   "keep": false,
+   "reason": "1.03x is within noise",
+   "speedup": 1.0267370145272972
+  },
+  {
+   "change": "Enable cuDNN convolution autotuning for the fixed-size image batches to select faster convolution algorithms.",
+   "keep": false,
+   "reason": "0.99x is within noise",
+   "speedup": 0.9925898697795921
+  }
+ ],
+ "final_pair": null,
+ "turns": 19,
+ "tokens": {
+  "input": 201131,
+  "output": 1474
+ },
+ "stopped": null
+}

@@ -1,0 +1,43 @@
+{
+ "target": "nerf-pytorch",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 184.75917349999997,
+ "measured_speedup": 2.7148650200097055,
+ "speedup": 2.7148650200097055,
+ "kept": [
+  "llm patch, made without measuring"
+ ],
+ "attempts": [
+  {
+   "change": "llm patch, made without measuring",
+   "keep": true,
+   "reason": "2.71x faster, loss within noise",
+   "speedup": 2.7148650200097055
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   180.93369785999997,
+   188.58464913999995
+  ],
+  "candidate_ms": [
+   68.16194758000023,
+   67.91838065999997
+  ],
+  "baseline_loss": [
+   0.20272061030069988,
+   0.42856653531392414
+  ],
+  "candidate_loss": [
+   0.20273772180080413,
+   0.428557813167572
+  ]
+ },
+ "turns": 10,
+ "tokens": {
+  "input": 132402,
+  "output": 3161
+ },
+ "stopped": null
+}

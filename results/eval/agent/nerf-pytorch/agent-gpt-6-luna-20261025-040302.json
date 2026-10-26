@@ -1,0 +1,61 @@
+{
+ "target": "nerf-pytorch",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 182.05853228,
+ "measured_speedup": 1.1777499292115259,
+ "speedup": 1.1777499292115259,
+ "kept": [
+  "Allow TF32 for CUDA matrix multiplications, accelerating the dominant linear-layer GEMMs on L4."
+ ],
+ "attempts": [
+  {
+   "change": "Enable fused CUDA Adam to reduce optimizer kernel launches and overhead.",
+   "keep": false,
+   "reason": "1.00x is within noise",
+   "speedup": 0.9974456197918533
+  },
+  {
+   "change": "Short-circuit disabled DEBUG numerical checks before launching GPU reductions and synchronizations.",
+   "keep": false,
+   "reason": "1.00x is within noise",
+   "speedup": 1.0023695052335135
+  },
+  {
+   "change": "Create the terminal distance tensor directly on the existing tensor's device and dtype, avoiding CPU allocation and transfer.",
+   "keep": false,
+   "reason": "1.00x is within noise",
+   "speedup": 1.0040597231406885
+  },
+  {
+   "change": "Allow TF32 for CUDA matrix multiplications, accelerating the dominant linear-layer GEMMs on L4.",
+   "keep": true,
+   "reason": "1.13x faster, loss within noise",
+   "speedup": 1.1330987799792887
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   177.57960104000003,
+   179.98277243999993
+  ],
+  "candidate_ms": [
+   149.57766120000002,
+   154.04623964
+  ],
+  "baseline_loss": [
+   0.20272061030069988,
+   0.42856653531392414
+  ],
+  "candidate_loss": [
+   0.20272245804468791,
+   0.42856051127115885
+  ]
+ },
+ "turns": 18,
+ "tokens": {
+  "input": 93982,
+  "output": 904
+ },
+ "stopped": null
+}

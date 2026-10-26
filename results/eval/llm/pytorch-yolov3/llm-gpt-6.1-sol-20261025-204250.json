@@ -1,0 +1,41 @@
+{
+ "target": "pytorch-yolov3",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 532.7029177700001,
+ "measured_speedup": 0.6049392446653059,
+ "speedup": 1.0,
+ "kept": [],
+ "attempts": [
+  {
+   "change": "llm patch, made without measuring",
+   "keep": false,
+   "reason": "0.60x is within noise",
+   "speedup": 0.6049392446653059
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   522.78010678,
+   542.6257287600004
+  ],
+  "candidate_ms": [
+   883.5186180200003,
+   877.364807439999
+  ],
+  "baseline_loss": [
+   3.1721829732259113,
+   3.147962792714437
+  ],
+  "candidate_loss": [
+   3.1723262627919513,
+   3.148097515106201
+  ]
+ },
+ "turns": 17,
+ "tokens": {
+  "input": 236764,
+  "output": 2753
+ },
+ "stopped": null
+}

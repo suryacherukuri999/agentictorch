@@ -1,0 +1,60 @@
+{
+ "target": "pytorch-ddpm",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 545.2626161400001,
+ "measured_speedup": 1.2881183334893826,
+ "speedup": 1.2881183334893826,
+ "kept": [
+  "Use CUDA bfloat16 autocast for the diffusion model forward and loss, reducing convolution compute cost on L4 while retaining float32 master parameters."
+ ],
+ "attempts": [
+  {
+   "change": "Use CUDA bfloat16 autocast for the diffusion model forward and loss, reducing convolution compute cost on L4 while retaining float32 master parameters.",
+   "keep": true,
+   "reason": "1.28x faster, loss within noise",
+   "speedup": 1.2824511193446602
+  },
+  {
+   "change": "Keep model and image batches in channels_last format alongside bfloat16 autocast to improve convolution Tensor Core throughput.",
+   "keep": false,
+   "reason": "0.93x is within noise",
+   "speedup": 0.9285575519775261
+  },
+  {
+   "change": "Set gradients to None when zeroing Adam gradients, avoiding unnecessary writes and allowing efficient gradient allocation.",
+   "keep": false,
+   "reason": "1.00x is within noise",
+   "speedup": 1.0017008142636579
+  },
+  {
+   "change": "Use fused CUDA Adam to combine optimizer update kernels and reduce per-step launch overhead.",
+   "keep": false,
+   "reason": "1.01x is within noise",
+   "speedup": 1.010166356725429
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   552.1434684400001,
+   553.6649674399996
+  ],
+  "candidate_ms": [
+   431.3499026200003,
+   427.1277191799998
+  ],
+  "baseline_loss": [
+   0.9945615649223327,
+   0.9946564793586731
+  ],
+  "candidate_loss": [
+   0.9945967594782511,
+   0.994674801826477
+  ]
+ },
+ "turns": 20,
+ "tokens": {
+  "input": 159625,
+  "output": 1092
+ }
+}

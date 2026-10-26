@@ -1,0 +1,62 @@
+{
+ "target": "ganilla",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 136.45526463,
+ "measured_speedup": 1.3398992130450789,
+ "speedup": 1.3398992130450789,
+ "kept": [
+  "Compile generator and discriminator modules in place to fuse operations and reduce eager launch overhead while preserving checkpoint format.",
+  "Pin DataLoader batches and use non-blocking host-to-device copies to remove two per-step host synchronizations."
+ ],
+ "attempts": [
+  {
+   "change": "Use bfloat16 autocast for generator/discriminator forwards and losses, with FP32 parameters and backward outside autocast.",
+   "keep": false,
+   "reason": "0.92x is within noise",
+   "speedup": 0.9245925281924782
+  },
+  {
+   "change": "Compile generator and discriminator modules in place to fuse operations and reduce eager launch overhead while preserving checkpoint format.",
+   "keep": true,
+   "reason": "1.25x faster, loss within noise",
+   "speedup": 1.2512612644155212
+  },
+  {
+   "change": "Use fused CUDA Adam for both optimizers to reduce optimizer kernels without changing hyperparameters.",
+   "keep": false,
+   "reason": "1.01x is within noise",
+   "speedup": 1.0066846055806224
+  },
+  {
+   "change": "Pin DataLoader batches and use non-blocking host-to-device copies to remove two per-step host synchronizations.",
+   "keep": true,
+   "reason": "1.08x faster, loss within noise",
+   "speedup": 1.0750064618924506
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   130.10988476000003,
+   136.63488153999992
+  ],
+  "candidate_ms": [
+   99.29576913999993,
+   99.72335212000019
+  ],
+  "baseline_loss": [
+   3.633565225203832,
+   3.771720516019397
+  ],
+  "candidate_loss": [
+   3.697737201717165,
+   3.750534731811947
+  ]
+ },
+ "turns": 26,
+ "tokens": {
+  "input": 352856,
+  "output": 2080
+ },
+ "stopped": null
+}

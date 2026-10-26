@@ -1,0 +1,68 @@
+{
+ "target": "nerf-pytorch",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 185.15180595999996,
+ "measured_speedup": 2.4273553875709135,
+ "speedup": 2.4273553875709135,
+ "kept": [
+  "Use bfloat16 autocast only for NeRF MLP evaluations on CUDA; retain float32 volume integration and loss.",
+  "Compile coarse and fine MLPs in place to fuse pointwise operations and optimize forward/backward without changing checkpoint format."
+ ],
+ "attempts": [
+  {
+   "change": "Short-circuit disabled debug checks before evaluating CUDA reductions, eliminating unnecessary host-device synchronizations.",
+   "keep": false,
+   "reason": "1.00x is within noise",
+   "speedup": 1.0020091006360983
+  },
+  {
+   "change": "Use bfloat16 autocast only for NeRF MLP evaluations on CUDA; retain float32 volume integration and loss.",
+   "keep": true,
+   "reason": "2.06x faster, loss within noise",
+   "speedup": 2.0551065010921117
+  },
+  {
+   "change": "Compile coarse and fine MLPs in place to fuse pointwise operations and optimize forward/backward without changing checkpoint format.",
+   "keep": true,
+   "reason": "1.23x faster, loss within noise",
+   "speedup": 1.2320177381645536
+  },
+  {
+   "change": "Retest short-circuiting disabled debug reductions after accelerating the MLP, where synchronization overhead is a larger fraction of step time.",
+   "keep": false,
+   "reason": "1.04x is within noise",
+   "speedup": 1.0358240791554507
+  },
+  {
+   "change": "Use fused CUDA Adam to combine parameter-update kernels while retaining optimizer hyperparameters and float32 parameter states.",
+   "keep": false,
+   "reason": "1.00x is within noise",
+   "speedup": 0.9964825644030931
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   185.72217592000007,
+   172.47083084
+  ],
+  "candidate_ms": [
+   74.3810481600002,
+   73.08872621999996
+  ],
+  "baseline_loss": [
+   0.20272061030069988,
+   0.42856653531392414
+  ],
+  "candidate_loss": [
+   0.20274506409962972,
+   0.4285559316476186
+  ]
+ },
+ "turns": 21,
+ "tokens": {
+  "input": 291497,
+  "output": 1299
+ },
+ "stopped": null
+}

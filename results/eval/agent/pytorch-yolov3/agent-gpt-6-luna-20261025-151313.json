@@ -1,0 +1,63 @@
+{
+ "target": "pytorch-yolov3",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 560.02980811,
+ "measured_speedup": 2.0749593178771835,
+ "speedup": 2.0749593178771835,
+ "kept": [
+  "Use CUDA bfloat16 autocast for model forward and loss to accelerate L4 tensor-core convolutions.",
+  "Keep training DataLoader workers alive across epochs to avoid worker restart overhead.",
+  "Enable fused CUDA Adam implementation to reduce optimizer kernel overhead."
+ ],
+ "attempts": [
+  {
+   "change": "Use CUDA bfloat16 autocast for model forward and loss to accelerate L4 tensor-core convolutions.",
+   "keep": true,
+   "reason": "1.35x faster, loss within noise",
+   "speedup": 1.3456053961479408
+  },
+  {
+   "change": "Keep training DataLoader workers alive across epochs to avoid worker restart overhead.",
+   "keep": true,
+   "reason": "1.37x faster, loss within noise",
+   "speedup": 1.3652681588125959
+  },
+  {
+   "change": "Make target transfer asynchronous, matching the pinned-memory image transfer.",
+   "keep": false,
+   "reason": "1.00x is within noise",
+   "speedup": 0.9997785874183229
+  },
+  {
+   "change": "Enable fused CUDA Adam implementation to reduce optimizer kernel overhead.",
+   "keep": true,
+   "reason": "1.06x faster, loss within noise",
+   "speedup": 1.059326862523301
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   547.63510532,
+   538.1093419800001
+  ],
+  "candidate_ms": [
+   259.09295421999985,
+   264.1721534800001
+  ],
+  "baseline_loss": [
+   3.1726529280344646,
+   3.1475984891255697
+  ],
+  "candidate_loss": [
+   3.1688840866088865,
+   3.153073040644328
+  ]
+ },
+ "turns": 18,
+ "tokens": {
+  "input": 176524,
+  "output": 778
+ },
+ "stopped": null
+}

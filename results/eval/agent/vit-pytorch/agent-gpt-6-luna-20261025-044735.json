@@ -1,0 +1,62 @@
+{
+ "target": "vit-pytorch",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 26.820586330000005,
+ "measured_speedup": 1.3712935709002312,
+ "speedup": 1.3712935709002312,
+ "kept": [
+  "Use four persistent DataLoader workers and pinned host memory to overlap CIFAR loading and enable faster host-to-GPU transfers.",
+  "Enable Adam's fused CUDA implementation to reduce optimizer kernel launches while preserving the optimizer update."
+ ],
+ "attempts": [
+  {
+   "change": "Use four persistent DataLoader workers and pinned host memory to overlap CIFAR loading and enable faster host-to-GPU transfers.",
+   "keep": true,
+   "reason": "1.27x faster, loss within noise",
+   "speedup": 1.270434987112486
+  },
+  {
+   "change": "Remove explicit .item() calls from per-step loss printing to avoid forcing separate host-device synchronizations.",
+   "keep": false,
+   "reason": "1.01x is within noise",
+   "speedup": 1.0094099328252881
+  },
+  {
+   "change": "Enable Adam's fused CUDA implementation to reduce optimizer kernel launches while preserving the optimizer update.",
+   "keep": true,
+   "reason": "1.04x faster, loss within noise",
+   "speedup": 1.0417697059614712
+  },
+  {
+   "change": "Compile the ViT module to reduce Python and kernel-launch overhead during repeated training steps.",
+   "keep": false,
+   "reason": "1.10x is within noise",
+   "speedup": 1.1039968333469965
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   28.304902419999998,
+   29.55926757999997
+  ],
+  "candidate_ms": [
+   20.558873199999965,
+   21.641887900000008
+  ],
+  "baseline_loss": [
+   4.574062252044678,
+   4.551389058430989
+  ],
+  "candidate_loss": [
+   4.574062220255533,
+   4.551388994852702
+  ]
+ },
+ "turns": 17,
+ "tokens": {
+  "input": 96707,
+  "output": 747
+ },
+ "stopped": null
+}

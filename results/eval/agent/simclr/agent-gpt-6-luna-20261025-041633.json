@@ -1,0 +1,63 @@
+{
+ "target": "simclr",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 417.00019227999996,
+ "measured_speedup": 2.2295613215832186,
+ "speedup": 2.2295613215832186,
+ "kept": [
+  "Use CUDA autocast FP16 for model and contrastive loss to accelerate convolutions on L4.",
+  "Run ResNet inputs and weights in channels_last format, which can improve Tensor Core convolution throughput with AMP.",
+  "Enable cuDNN autotuning for the fixed-size convolution workload to select faster convolution algorithms."
+ ],
+ "attempts": [
+  {
+   "change": "Use CUDA autocast FP16 for model and contrastive loss to accelerate convolutions on L4.",
+   "keep": true,
+   "reason": "1.68x faster, loss within noise",
+   "speedup": 1.6753364091595913
+  },
+  {
+   "change": "Create contrastive loss labels directly on the target device, avoiding CPU allocation and host-to-device copy.",
+   "keep": false,
+   "reason": "1.01x is within noise",
+   "speedup": 1.0131292628589583
+  },
+  {
+   "change": "Run ResNet inputs and weights in channels_last format, which can improve Tensor Core convolution throughput with AMP.",
+   "keep": true,
+   "reason": "1.28x faster, loss within noise",
+   "speedup": 1.2770760085374253
+  },
+  {
+   "change": "Enable cuDNN autotuning for the fixed-size convolution workload to select faster convolution algorithms.",
+   "keep": true,
+   "reason": "1.05x faster, loss within noise",
+   "speedup": 1.0450414468741533
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   415.78696334,
+   420.6555069
+  ],
+  "candidate_ms": [
+   186.4895572600001,
+   188.67053711999995
+  ],
+  "baseline_loss": [
+   5.295959122975668,
+   5.284312852223715
+  ],
+  "candidate_loss": [
+   5.302268028259277,
+   5.259116299947103
+  ]
+ },
+ "turns": 19,
+ "tokens": {
+  "input": 130727,
+  "output": 899
+ },
+ "stopped": null
+}

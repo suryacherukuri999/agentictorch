@@ -1,0 +1,63 @@
+{
+ "target": "jointbert",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 136.95226832,
+ "measured_speedup": 2.6458821341210705,
+ "speedup": 2.6458821341210705,
+ "kept": [
+  "Enable CUDA bfloat16 autocast for model forward and loss to use L4 Tensor Cores and reduce activation bandwidth.",
+  "Use fused AdamW CUDA implementation to combine optimizer elementwise operations and reduce launch overhead.",
+  "Compile the CUDA model with reduce-overhead to reduce Python and kernel launch overhead during training."
+ ],
+ "attempts": [
+  {
+   "change": "Enable CUDA bfloat16 autocast for model forward and loss to use L4 Tensor Cores and reduce activation bandwidth.",
+   "keep": true,
+   "reason": "1.78x faster, loss within noise",
+   "speedup": 1.7812221546942335
+  },
+  {
+   "change": "Use fused AdamW CUDA implementation to combine optimizer elementwise operations and reduce launch overhead.",
+   "keep": true,
+   "reason": "1.32x faster, loss within noise",
+   "speedup": 1.323743873421886
+  },
+  {
+   "change": "Accumulate detached training loss on device and transfer once at return, removing per-step loss.item() host-device synchronization.",
+   "keep": false,
+   "reason": "1.02x is within noise",
+   "speedup": 1.018858692721819
+  },
+  {
+   "change": "Compile the CUDA model with reduce-overhead to reduce Python and kernel launch overhead during training.",
+   "keep": true,
+   "reason": "1.14x faster, loss within noise",
+   "speedup": 1.1399363203195063
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   134.01210522,
+   133.82576844
+  ],
+  "candidate_ms": [
+   50.32907430000023,
+   50.90071060000014
+  ],
+  "baseline_loss": [
+   1.0939531048138937,
+   1.1951859712600708
+  ],
+  "candidate_loss": [
+   1.0826772729555765,
+   1.1465355078379313
+  ]
+ },
+ "turns": 20,
+ "tokens": {
+  "input": 149472,
+  "output": 942
+ },
+ "stopped": null
+}

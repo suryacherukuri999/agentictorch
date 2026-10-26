@@ -1,0 +1,69 @@
+{
+ "target": "simclr",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 418.93121290000005,
+ "measured_speedup": 2.389399578239046,
+ "speedup": 2.389399578239046,
+ "kept": [
+  "Use bfloat16 autocast for encoder/projector while keeping NT-Xent loss in float32.",
+  "Use channels-last layout for convolution model and input transfers to improve Tensor Core convolution throughput.",
+  "Pin DataLoader host batches to accelerate the existing nonblocking host-to-device input transfers."
+ ],
+ "attempts": [
+  {
+   "change": "Use bfloat16 autocast for encoder/projector while keeping NT-Xent loss in float32.",
+   "keep": true,
+   "reason": "1.60x faster, loss within noise",
+   "speedup": 1.5996716917191132
+  },
+  {
+   "change": "Use channels-last layout for convolution model and input transfers to improve Tensor Core convolution throughput.",
+   "keep": true,
+   "reason": "1.26x faster, loss within noise",
+   "speedup": 1.2561415417397381
+  },
+  {
+   "change": "Pin DataLoader host batches to accelerate the existing nonblocking host-to-device input transfers.",
+   "keep": true,
+   "reason": "1.16x faster, loss within noise",
+   "speedup": 1.158284738897626
+  },
+  {
+   "change": "Compile the model in place to fuse pointwise operations and reduce training launch overhead without changing checkpoint keys.",
+   "keep": false,
+   "reason": "1.02x is within noise",
+   "speedup": 1.0152522547458058
+  },
+  {
+   "change": "Use fused Adam with identical hyperparameters to reduce optimizer kernel and memory overhead.",
+   "keep": false,
+   "reason": "1.01x is within noise",
+   "speedup": 1.011045311080952
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   426.3658708800001,
+   425.81891152
+  ],
+  "candidate_ms": [
+   179.58618815999998,
+   177.07484949999994
+  ],
+  "baseline_loss": [
+   5.304508940378825,
+   5.259006977081299
+  ],
+  "candidate_loss": [
+   5.296822579701741,
+   5.263981342315674
+  ]
+ },
+ "turns": 22,
+ "tokens": {
+  "input": 171591,
+  "output": 1277
+ },
+ "stopped": null
+}

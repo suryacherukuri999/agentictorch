@@ -1,0 +1,43 @@
+{
+ "target": "efficient-kan",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 17.408100479999984,
+ "measured_speedup": 2.170528827904113,
+ "speedup": 2.170528827904113,
+ "kept": [
+  "llm patch, made without measuring"
+ ],
+ "attempts": [
+  {
+   "change": "llm patch, made without measuring",
+   "keep": true,
+   "reason": "2.17x faster, loss within noise",
+   "speedup": 2.170528827904113
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   17.630656679999994,
+   17.185544279999974
+  ],
+  "candidate_ms": [
+   8.252429799999987,
+   7.793253879999965
+  ],
+  "baseline_loss": [
+   0.7391134023666381,
+   0.7077982902526856
+  ],
+  "candidate_loss": [
+   0.7389795303344726,
+   0.7075162728627523
+  ]
+ },
+ "turns": 5,
+ "tokens": {
+  "input": 16291,
+  "output": 2038
+ },
+ "stopped": null
+}

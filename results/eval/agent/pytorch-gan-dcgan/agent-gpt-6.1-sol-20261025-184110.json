@@ -1,0 +1,69 @@
+{
+ "target": "pytorch-gan-dcgan",
+ "model": "gpt-6.1-sol",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 18.368139879999987,
+ "measured_speedup": 2.150792852504958,
+ "speedup": 2.150792852504958,
+ "kept": [
+  "Enable asynchronous MNIST loading with existing n_cpu workers and keep workers alive across epochs.",
+  "Use DataLoader pinned memory and nonblocking image transfers to avoid a synchronous host-to-device copy.",
+  "Use fused CUDA Adam to reduce optimizer kernel launches while preserving Adam hyperparameters."
+ ],
+ "attempts": [
+  {
+   "change": "Enable asynchronous MNIST loading with existing n_cpu workers and keep workers alive across epochs.",
+   "keep": true,
+   "reason": "1.56x faster, loss within noise",
+   "speedup": 1.556488685536195
+  },
+  {
+   "change": "Use DataLoader pinned memory and nonblocking image transfers to avoid a synchronous host-to-device copy.",
+   "keep": true,
+   "reason": "1.06x faster, loss within noise",
+   "speedup": 1.0621115905643204
+  },
+  {
+   "change": "Use channels-last convolution weights and activations in FP32, with layout-safe discriminator flattening.",
+   "keep": false,
+   "reason": "0.96x is within noise",
+   "speedup": 0.9604173568499567
+  },
+  {
+   "change": "Use fused CUDA Adam to reduce optimizer kernel launches while preserving Adam hyperparameters.",
+   "keep": true,
+   "reason": "1.10x faster, loss within noise",
+   "speedup": 1.0988725540688866
+  },
+  {
+   "change": "Skip discarded discriminator parameter gradients in the generator phase, preserving input gradients and all forward passes.",
+   "keep": false,
+   "reason": "1.00x is within noise",
+   "speedup": 0.9983418284273022
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   29.241686840000014,
+   29.097189880000016
+  ],
+  "candidate_ms": [
+   13.275034059999982,
+   13.85545067999999
+  ],
+  "baseline_loss": [
+   0.6469102044900258,
+   0.6741759339968364
+  ],
+  "candidate_loss": [
+   0.6468139946460724,
+   0.6739535133043925
+  ]
+ },
+ "turns": 26,
+ "tokens": {
+  "input": 239905,
+  "output": 1721
+ },
+ "stopped": null
+}

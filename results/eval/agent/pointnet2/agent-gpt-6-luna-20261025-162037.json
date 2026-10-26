@@ -1,0 +1,61 @@
+{
+ "target": "pointnet2",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 280.42707728,
+ "measured_speedup": 1.6484269356432972,
+ "speedup": 1.6484269356432972,
+ "kept": [
+  "Replace boolean masked distance update in farthest-point sampling with elementwise minimum, avoiding per-iteration nonzero and CPU synchronization."
+ ],
+ "attempts": [
+  {
+   "change": "Replace boolean masked distance update in farthest-point sampling with elementwise minimum, avoiding per-iteration nonzero and CPU synchronization.",
+   "keep": true,
+   "reason": "1.67x faster, loss within noise",
+   "speedup": 1.6730759786033722
+  },
+  {
+   "change": "Enable cuDNN autotuning for the fixed-shape convolution workload to select faster convolution algorithms.",
+   "keep": false,
+   "reason": "1.01x is within noise",
+   "speedup": 1.0144639712107362
+  },
+  {
+   "change": "Keep the accuracy reduction on GPU instead of copying the prediction comparison tensor to CPU before summing.",
+   "keep": false,
+   "reason": "1.00x is within noise",
+   "speedup": 1.003433629786851
+  },
+  {
+   "change": "Create farthest-point-sampling batch indices directly on the input device, avoiding a CPU allocation and transfer.",
+   "keep": false,
+   "reason": "0.99x is within noise",
+   "speedup": 0.9937690960502786
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   296.96239399999996,
+   277.14207004
+  ],
+  "candidate_ms": [
+   175.12151439999997,
+   172.9517669
+  ],
+  "baseline_loss": [
+   3.003043556213379,
+   3.013991038004557
+  ],
+  "candidate_loss": [
+   3.003043556213379,
+   3.013991038004557
+  ]
+ },
+ "turns": 17,
+ "tokens": {
+  "input": 115254,
+  "output": 898
+ },
+ "stopped": null
+}

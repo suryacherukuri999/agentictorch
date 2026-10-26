@@ -1,0 +1,43 @@
+{
+ "target": "simclr",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 422.0186649799999,
+ "measured_speedup": 1.6196712535535562,
+ "speedup": 1.6196712535535562,
+ "kept": [
+  "llm patch, made without measuring"
+ ],
+ "attempts": [
+  {
+   "change": "llm patch, made without measuring",
+   "keep": true,
+   "reason": "1.62x faster, loss within noise",
+   "speedup": 1.6196712535535562
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   426.63020104,
+   417.4071289199999
+  ],
+  "candidate_ms": [
+   263.40219468,
+   257.71418306
+  ],
+  "baseline_loss": [
+   5.297221151987712,
+   5.249674892425537
+  ],
+  "candidate_loss": [
+   5.28899606068929,
+   5.2621710459391275
+  ]
+ },
+ "turns": 6,
+ "tokens": {
+  "input": 36818,
+  "output": 1260
+ },
+ "stopped": null
+}

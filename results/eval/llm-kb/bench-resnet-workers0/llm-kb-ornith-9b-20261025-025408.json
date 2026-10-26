@@ -1,0 +1,23 @@
+{
+ "target": "bench-resnet-workers0",
+ "model": "ornith-1.5:9b",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 122.88059685000005,
+ "measured_speedup": 2.610667898609786,
+ "speedup": 2.610667898609786,
+ "kept": [
+  "llm-kb patch, made without measuring"
+ ],
+ "attempts": [
+  {
+   "change": "llm-kb patch, made without measuring",
+   "keep": true,
+   "reason": "2.61x faster, loss within noise"
+  }
+ ],
+ "turns": 5,
+ "tokens": {
+  "input": 12058,
+  "output": 5776
+ }
+}

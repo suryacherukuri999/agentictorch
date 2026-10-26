@@ -1,0 +1,24 @@
+{
+ "target": "x-transformers",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 717.7799304299999,
+ "measured_speedup": null,
+ "speedup": 1.0,
+ "kept": [],
+ "attempts": [
+  {
+   "change": "Move dataset sampling into persistent DataLoader workers and pin batches to reduce synchronous per-example GPU transfers and loader stalls.",
+   "keep": false,
+   "reason": "run failed: RuntimeError: Expected all tensors to be on the same device, but got index is on cpu, different from other tensors on cuda:0 (when checking argument in method wrapper_CUDA__index_select)",
+   "speedup": null
+  }
+ ],
+ "final_pair": null,
+ "turns": 30,
+ "tokens": {
+  "input": 244797,
+  "output": 1776
+ },
+ "stopped": null
+}

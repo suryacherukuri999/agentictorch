@@ -1,0 +1,15 @@
+{
+ "target": "pytorch-ddpm",
+ "model": "rules",
+ "gpu": null,
+ "baseline_ms": null,
+ "measured_speedup": null,
+ "speedup": 1.0,
+ "kept": [],
+ "attempts": [],
+ "turns": 0,
+ "tokens": {
+  "input": 0,
+  "output": 0
+ }
+}

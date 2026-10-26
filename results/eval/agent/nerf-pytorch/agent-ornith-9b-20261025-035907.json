@@ -1,0 +1,42 @@
+{
+ "target": "nerf-pytorch",
+ "model": "ornith-1.5:9b",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 176.19583602000003,
+ "measured_speedup": null,
+ "speedup": 1.0,
+ "kept": [],
+ "attempts": [
+  {
+   "change": "torch.compile(model, dynamic=True) to fuse Linear+ReLU and cut kernel launch overhead",
+   "keep": false,
+   "reason": "1.01x is within noise",
+   "speedup": 1.0077197789213452
+  },
+  {
+   "change": "torch.autocast FP16 matmul math inside network to use Tensor Cores",
+   "keep": false,
+   "reason": "run failed: TypeError: autocast.__init__() got an unexpected keyword argument 'allowed_hops_to_bf16'",
+   "speedup": null
+  },
+  {
+   "change": "torch.autocast FP16 matmul math inside network to use Tensor Cores",
+   "keep": false,
+   "reason": "run failed: TypeError: NeRF.forward() takes 2 positional arguments but 3 were given",
+   "speedup": null
+  },
+  {
+   "change": "torch.autocast FP16 matmul math inside network to use Tensor Cores",
+   "keep": false,
+   "reason": "run failed: RuntimeError: split_with_sizes expects split_sizes to sum exactly to 3 (input tensor's size at dimension -1), but got split_sizes=[63, 27]",
+   "speedup": null
+  }
+ ],
+ "final_pair": null,
+ "turns": 26,
+ "tokens": {
+  "input": 558262,
+  "output": 29571
+ },
+ "stopped": null
+}

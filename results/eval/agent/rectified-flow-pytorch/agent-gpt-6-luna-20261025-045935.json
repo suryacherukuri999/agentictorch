@@ -1,0 +1,49 @@
+{
+ "target": "rectified-flow-pytorch",
+ "model": "gpt-6-luna",
+ "gpu": "NVIDIA L4",
+ "baseline_ms": 431.20862618000007,
+ "measured_speedup": 1.1741421691461356,
+ "speedup": 1.1741421691461356,
+ "kept": [
+  "Use four persistent DataLoader workers and pinned host memory to overlap Oxford image loading and host-to-device transfers."
+ ],
+ "attempts": [
+  {
+   "change": "Use four persistent DataLoader workers and pinned host memory to overlap Oxford image loading and host-to-device transfers.",
+   "keep": true,
+   "reason": "1.18x faster, loss within noise",
+   "speedup": 1.1831282469399167
+  },
+  {
+   "change": "Enable fused CUDA Adam to combine optimizer operations and reduce per-step kernel overhead.",
+   "keep": false,
+   "reason": "1.02x is within noise",
+   "speedup": 1.0181197103655661
+  }
+ ],
+ "final_pair": {
+  "baseline_ms": [
+   428.0396171,
+   469.67061418000014
+  ],
+  "candidate_ms": [
+   368.8202592199999,
+   395.3859337800001
+  ],
+  "baseline_loss": [
+   1.633898776769638,
+   4.061049308379491
+  ],
+  "candidate_loss": [
+   1.6308792034784954,
+   4.061333004633585
+  ]
+ },
+ "turns": 12,
+ "tokens": {
+  "input": 93902,
+  "output": 600
+ },
+ "stopped": null
+}
