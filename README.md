@@ -6,8 +6,8 @@ only when a rerun on the GPU shows it is faster and the loss hasn't moved.
 
 On 15 popular open-source repos, the agent with gpt-6.1-sol made 14 faster: up to
 5.52x, and 2.36x on average (geometric mean). The same model editing the code once,
-with no testing and no second try, averaged 1.92x and shipped 3 harmful changes; the
-agent shipped none. All runs used an NVIDIA L4.
+with no testing and no second try, averaged 1.92x and made 3 harmful changes; the
+agent made none. All runs used an NVIDIA L4.
 
 ## Results
 
@@ -18,14 +18,12 @@ uses the same code. The agent itself ran on macOS with OpenAI's gpt-6.1-sol and 
 smaller gpt-6-luna. Every number comes from a run saved in `results/`, and
 `uv run python -m agentictorch.scoreboard` rebuilds the tables.
 
-Each measurement runs the original and the changed code in the same container, once
-per seed for two seeds, for 50 steps after 10 warm-up steps. A change is kept only if
-it is at least 3% faster in every pair and its final loss is within run-to-run noise.
-Speedup is the original step time divided by the new one.
+Each number compares the original and the changed code side by side in the same
+container, with two seeds, over 50 steps after 10 warm-up steps. Speedup is the
+original step time divided by the new one. A change is kept only if it is at least 3%
+faster with both seeds and the loss stays within run-to-run noise.
 
-### The agent on 15 repos
-
-With gpt-6.1-sol:
+### The agent on 15 repos (gpt-6.1-sol)
 
 | Repo | Stars | Step time (ms) | Speedup | Changes that made it faster |
 |---|---|---|---|---|
@@ -45,18 +43,18 @@ With gpt-6.1-sol:
 | [giddyyupp/ganilla](https://github.com/giddyyupp/ganilla) | 482 | 133.4 → 99.5 | 1.34x | torch.compile, pinned copies |
 | [facebookresearch/detr](https://github.com/facebookresearch/detr) | 15,352 | 207.9 | 1.00x | none |
 
-### Agent vs one patch
+### Agent vs single patch
 
 The single patch (`--setup llm`) starts from the same place as the agent: the training
 command, tools to read and edit code, and hints from a static scan. The model edits
-the code once, and the patch ships whatever it does: a crash, a moved loss or a
-slowdown counts as harmful, and a crash counts as 1.00x. Geometric means over the 15
-repos:
+the code once and the patch is used as is. A crash, a changed loss or a slowdown
+counts as harmful, and a crash counts as 1.00x. Averages are geometric means over the
+15 repos:
 
-| Model | Agent | One patch | Agent vs one patch | Harmful changes (agent, one patch) |
+| Model | Agent | Single patch | Agent vs single patch | Harmful changes |
 |---|---|---|---|---|
-| gpt-6.1-sol | 2.36x | 1.92x | 1.23x | 0, 3 |
-| gpt-6-luna | 1.48x | 1.31x | 1.13x | 0, 6 |
+| gpt-6.1-sol | 2.36x | 1.92x | 1.23x | 0 vs 3 |
+| gpt-6-luna | 1.48x | 1.31x | 1.13x | 0 vs 6 |
 
 Because the agent tests every change, it never made a repo worse. The single patches
 did: some crashed or timed out, one changed the loss, and five made training slower,
@@ -126,7 +124,7 @@ Build, from a clone of this repo:
 uv sync                                         # install dependencies
 uv run pytest                                   # unit tests, CPU only
 uv run modal setup                              # log in to Modal; opens a browser
-export OPENAI_API_KEY=...                       # or GEMINI_API_KEY, or ~/agentictorch-work/.env
+export OPENAI_API_KEY=...                       # or GEMINI_API_KEY (or save it in ~/agentictorch-work/.env)
 uv run python -m agentictorch.kb.fetch          # download the performance docs
 uv run python -m agentictorch.kb.search build   # build the search index
 ```
