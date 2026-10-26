@@ -163,9 +163,9 @@ def _comparison() -> tuple[list[tuple[str, dict, bool]], list[str]]:
     # A blind patch ships whatever it does; the agent keeps measured wins only.
     columns = [
         ("Agent, gpt-6.1-sol", sol_agent_runs(), False),
-        ("One patch, gpt-6.1-sol", latest("llm", SOL_MODEL), True),
+        ("Single patch, gpt-6.1-sol", latest("llm", SOL_MODEL), True),
         ("Agent, gpt-6-luna", latest("agent", MAIN_MODEL), False),
-        ("One patch, gpt-6-luna", latest("llm", MAIN_MODEL), True),
+        ("Single patch, gpt-6-luna", latest("llm", MAIN_MODEL), True),
     ]
     common = set.intersection(*(set(runs) for _, runs, _ in columns))
     return columns, sorted(t for t in common if not t.startswith("bench-"))
@@ -203,14 +203,14 @@ def loop_gain() -> str:
     ratio of the geometric means is also the geometric mean of the per-repo ratios."""
     columns, targets = _comparison()
     lines = [
-        "| Model | Agent | One patch | Agent vs one patch | Harmful changes (agent, one patch) |",
+        "| Model | Agent | Single patch | Agent vs single patch | Harmful changes |",
         "|---|---|---|---|---|",
     ]
     for model, agent, patch in (("gpt-6.1-sol", *columns[0:2]), ("gpt-6-luna", *columns[2:4])):
         a = [_ships(agent[1], agent[2], t) for t in targets]
         p = [_ships(patch[1], patch[2], t) for t in targets]
         ga, gp = geometric_mean(x for x, _ in a), geometric_mean(x for x, _ in p)
-        harm = f"{sum(h for _, h in a)}, {sum(h for _, h in p)}"
+        harm = f"{sum(h for _, h in a)} vs {sum(h for _, h in p)}"
         lines.append(f"| {model} | {ga:.2f}x | {gp:.2f}x | {ga / gp:.2f}x | {harm} |")
     return "\n".join(lines)
 
